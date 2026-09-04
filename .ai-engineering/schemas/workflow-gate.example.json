@@ -1,0 +1,12 @@
+{
+  "WORKFLOW_GATE": {
+    "workflow": "string",
+    "step": "string",
+    "status": "string",
+    "unresolved_critical": "integer >= 0",
+    "unresolved_high": "integer >= 0",
+    "source_resolvable_open": "integer >= 0",
+    "artifact": "string path",
+    "next_recommended": "string|null"
+  }
+}

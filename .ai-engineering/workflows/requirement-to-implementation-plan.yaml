@@ -1,0 +1,46 @@
+version: '4.0'
+name: requirement-to-implementation-plan
+description: End-to-end controlled lifecycle from requirement/current-state analysis through verified TDD, artifact-level
+  detailed design, verified WBS, tests, and implementation readiness.
+runner_skill: run-engineering-workflow
+state_path: '{{artifact_root}}/parent_workflow_state.yaml'
+inputs:
+  required:
+  - requirement_path
+  - scope
+  - scope_slug
+  - run_id
+  defaults:
+    artifact_root: docs/reverse-engineering/runs/{{run_id}}
+phases:
+  requirement_to_design:
+    workflow: .ai-engineering/workflows/requirement-to-design.yaml
+    pass_inputs:
+    - requirement_path
+    - scope
+    - scope_slug
+    - run_id
+    - artifact_root
+    require_terminal_status:
+    - WORKFLOW_COMPLETE
+  design_to_implementation:
+    workflow: .ai-engineering/workflows/design-to-implementation.yaml
+    derived_inputs:
+      current_state_artifact: '{{artifact_root}}/analysis/{{scope_slug}}_current_state.md'
+      gap_artifact: '{{artifact_root}}/analysis/{{scope_slug}}_requirement_gap.md'
+      tdd_path: '{{artifact_root}}/proposals/{{scope_slug}}_tdd.md'
+      test_design_path: '{{artifact_root}}/test-design/{{scope_slug}}_test_design.md'
+    pass_inputs:
+    - requirement_path
+    - scope
+    - scope_slug
+    - run_id
+    - artifact_root
+    require_terminal_status:
+    - WORKFLOW_COMPLETE
+terminal:
+  success: IMPLEMENTATION_READY
+  preserve_external_blocker_status: true
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

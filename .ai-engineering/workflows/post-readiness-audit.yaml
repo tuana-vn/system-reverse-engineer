@@ -1,0 +1,37 @@
+version: '4.0'
+name: post-readiness-audit
+description: Independently challenge a completed IMPLEMENTATION_READY planning package before downstream implementation
+  handoff.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/runs/{{run_id}}/post_readiness_workflow_state.yaml
+inputs:
+  required:
+  - source_run_id
+  - source_workflow_state
+  - requirement_path
+  - scope
+  - scope_slug
+  - run_id
+  - source_run_manifest
+  defaults:
+    artifact_root: docs/reverse-engineering/runs/{{run_id}}
+    execution_mode: fresh
+    ignore_previous_completion: true
+    post_readiness_audit_artifact: '{{artifact_root}}/audits/post_readiness_audit.md'
+steps:
+  post_readiness_audit:
+    prompt: .ai-engineering/prompts/post-readiness-audit/01-post-readiness-audit.md
+    skills:
+    - post-readiness-adversarial-audit
+    output: '{{post_readiness_audit_artifact}}'
+    statuses:
+      POST_READINESS_AUDIT_PASS: DONE
+      POST_READINESS_AUDIT_PASS_WITH_WARNINGS: DONE
+      POST_READINESS_AUDIT_FAIL_SOURCE_GAPS: BLOCKED
+      POST_READINESS_AUDIT_FAIL_DESIGN_GAPS: BLOCKED
+      POST_READINESS_AUDIT_FAIL_WBS_GAPS: BLOCKED
+      POST_READINESS_AUDIT_FAIL_WORKFLOW_INTEGRITY: BLOCKED
+      POST_AUDIT_INPUT_NOT_RESOLVED: BLOCKED
+execution:
+  execution_mode: fresh
+  ignore_previous_completion: true

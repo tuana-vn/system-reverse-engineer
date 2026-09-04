@@ -1,7 +1,6 @@
 ---
 name: persistence-schema-reverse-engineering
 description: Reconstruct persistence architecture and database/data schema from current source, ORM mappings, SQL, migrations, DDL, schema bootstrap, upgrade scripts, and runtime repository wiring; distinguish code-known schema from external-only details.
-license: MIT
 ---
 
 # Persistence and Schema Reverse Engineering

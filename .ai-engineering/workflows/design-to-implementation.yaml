@@ -1,0 +1,219 @@
+version: '4.0'
+name: design-to-implementation
+description: Verify a TDD, decompose it into design artifacts, create and independently verify detailed design per
+  artifact, generate and verify implementation WBS, then certify implementation readiness.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/runs/{{run_id}}/workflow_state.yaml
+inputs:
+  required:
+  - requirement_path
+  - current_state_artifact
+  - gap_artifact
+  - tdd_path
+  - scope
+  - scope_slug
+  - run_id
+  optional:
+  - test_design_path
+  defaults:
+    artifact_root: docs/reverse-engineering/runs/{{run_id}}
+    execution_mode: resume
+    ignore_previous_completion: false
+    run_manifest: '{{artifact_root}}/RUN_MANIFEST.yaml'
+    tdd_verification_artifact: '{{artifact_root}}/verification/tdd_verification.md'
+    design_registry_artifact: '{{artifact_root}}/design/design_artifact_registry.md'
+    design_registry_verification_artifact: '{{artifact_root}}/design/verification/design_artifact_registry_verification.md'
+    wbs_artifact: '{{artifact_root}}/implementation/wbs.md'
+    wbs_verification_artifact: '{{artifact_root}}/implementation/wbs_verification.md'
+    implementation_readiness_artifact: '{{artifact_root}}/implementation/implementation_readiness.md'
+    post_readiness_audit_artifact: '{{artifact_root}}/audits/post_readiness_audit.md'
+steps:
+  input_provenance_precheck:
+    prompt: .ai-engineering/prompts/design-to-implementation/00-input-provenance-precheck.md
+    statuses:
+      INPUT_PROVENANCE_VERIFIED: tdd_verification
+      REQUIRED_INPUT_ARTIFACT_MISSING: BLOCKED
+      UPSTREAM_PROVENANCE_MISMATCH: BLOCKED
+  tdd_verification:
+    prompt: .ai-engineering/prompts/design-to-implementation/01-tdd-verification.md
+    skills:
+    - technical-design-verification
+    output: '{{tdd_verification_artifact}}'
+    statuses:
+      TDD_VERIFIED: design_artifact_decomposition
+      TDD_PARTIALLY_VERIFIED: revise_tdd
+      TDD_CONTRADICTED: revise_tdd
+      TDD_BLOCKED_SOURCE_GAPS: resolve_tdd_unknowns
+      TDD_INCOMPLETE_ARCHITECTURE: revise_tdd
+      TDD_INCOMPLETE_PROPOSED_UNIT_OWNERSHIP: revise_tdd
+  resolve_tdd_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: tdd_verification
+    on_success: tdd_verification
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  revise_tdd:
+    instruction: Stop automated progression. Return the TDD verification corrections to the user/design owner. Resume
+      at tdd_verification after the TDD is revised.
+    terminal_status: WORKFLOW_BLOCKED_DESIGN_REVISION
+  design_artifact_decomposition:
+    prompt: .ai-engineering/prompts/design-to-implementation/02-design-artifact-decomposition.md
+    skills:
+    - design-artifact-decomposition
+    output: '{{design_registry_artifact}}'
+    statuses:
+      ARTIFACT_REGISTRY_READY: design_artifact_decomposition_verification
+      ARTIFACT_REGISTRY_PARTIAL: resolve_registry_unknowns
+      ARTIFACT_REGISTRY_BLOCKED: resolve_registry_unknowns
+      ARTIFACT_DECOMPOSITION_INCOMPLETE: revise_tdd
+  design_artifact_decomposition_verification:
+    prompt: .ai-engineering/prompts/design-to-implementation/02b-design-artifact-decomposition-verification.md
+    skills:
+    - design-artifact-decomposition-verification
+    output: '{{design_registry_verification_artifact}}'
+    statuses:
+      ARTIFACT_DECOMPOSITION_VERIFIED: artifact_detailed_design_loop
+      ARTIFACT_DECOMPOSITION_VERIFICATION_FAILED: revise_tdd
+      ARTIFACT_DECOMPOSITION_VERIFICATION_BLOCKED: resolve_registry_unknowns
+  resolve_registry_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: design_artifact_decomposition
+    on_success: design_artifact_decomposition
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  artifact_detailed_design_loop:
+    foreach:
+      source: '{{design_registry_artifact}}'
+      items: artifacts where implementation_required != NO and DD Verification != VERIFIED
+      id_field: Artifact ID
+      order: dependency_topological
+      bindings:
+        artifact_id:
+          field: Artifact ID
+        artifact_name:
+          field: Name
+        artifact_slug:
+          field: Name
+          transform: slugify
+    per_item:
+      design:
+        prompt: .ai-engineering/prompts/design-to-implementation/03-artifact-detailed-design.md
+        skills:
+        - artifact-detailed-design
+        statuses:
+          DD_READY_FOR_VERIFICATION: verify
+          DD_BLOCKED_SOURCE_GAP: resolve_dd_design_unknowns
+          DD_BLOCKED_DEPENDENCY: defer_current_artifact
+        output: '{{artifact_root}}/design/details/{{artifact_id}}-{{artifact_slug}}.md'
+      verify:
+        prompt: .ai-engineering/prompts/design-to-implementation/04-detailed-design-verification.md
+        skills:
+        - detailed-design-verification
+        statuses:
+          DD_VERIFIED: next_artifact
+          DD_PARTIALLY_VERIFIED: revise_current_dd
+          DD_CONTRADICTED_BY_SOURCE: revise_current_dd
+          DD_BLOCKED_SOURCE_GAP: resolve_dd_verification_unknowns
+        output: '{{artifact_root}}/design/verification/{{artifact_id}}-verification.md'
+      revise_current_dd:
+        action: Return verification findings to the design step for the same artifact, then re-run verification.
+      defer_current_artifact:
+        action: Move to an unmet dependency first. If dependency graph cannot progress, stop with WORKFLOW_BLOCKED_DEPENDENCY_CYCLE.
+      resolve_dd_design_unknowns:
+        prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+        skills:
+        - resolve-high-impact-unknowns
+        inputs:
+          blocking_artifact: '{{blocking_artifact}}'
+          blocking_qids: '{{blocking_qids}}'
+          retry_step: '{{blocking_retry_step}}'
+        retry_step: design
+        on_success: design
+      resolve_dd_verification_unknowns:
+        prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+        skills:
+        - resolve-high-impact-unknowns
+        inputs:
+          blocking_artifact: '{{blocking_artifact}}'
+          blocking_qids: '{{blocking_qids}}'
+          retry_step: '{{blocking_retry_step}}'
+        retry_step: verify
+        on_success: verify
+    completion:
+      require: all implementation-required artifacts have DD Verification = VERIFIED
+      on_complete: wbs_generation
+  wbs_generation:
+    prompt: .ai-engineering/prompts/design-to-implementation/05-wbs-generation.md
+    skills:
+    - wbs-generation
+    output: '{{wbs_artifact}}'
+    statuses:
+      WBS_READY_FOR_VERIFICATION: wbs_verification
+      WBS_BLOCKED_DESIGN_GAP: artifact_detailed_design_loop
+      WBS_BLOCKED_SOURCE_GAP: resolve_wbs_unknowns
+  resolve_wbs_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: wbs_generation
+    on_success: wbs_generation
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  wbs_verification:
+    prompt: .ai-engineering/prompts/design-to-implementation/06-wbs-verification.md
+    skills:
+    - wbs-verification
+    output: '{{wbs_verification_artifact}}'
+    statuses:
+      WBS_VERIFIED: implementation_readiness
+      WBS_PARTIALLY_VERIFIED: revise_wbs
+      WBS_INCOMPLETE: revise_wbs
+      WBS_BLOCKED_SOURCE_GAP: resolve_wbs_unknowns
+  revise_wbs:
+    action: Return WBS verification findings to wbs_generation, revise only evidence-backed gaps, then re-run verification.
+    on_complete: wbs_verification
+  implementation_readiness:
+    prompt: .ai-engineering/prompts/design-to-implementation/07-implementation-readiness.md
+    skills:
+    - implementation-readiness-certification
+    output: '{{implementation_readiness_artifact}}'
+    statuses:
+      IMPLEMENTATION_READY: post_readiness_audit
+      IMPLEMENTATION_READY_WITH_EXTERNAL_BLOCKERS: post_readiness_audit
+      NOT_READY_DESIGN_GAPS: artifact_detailed_design_loop
+      NOT_READY_WBS_GAPS: revise_wbs
+      NOT_READY_SOURCE_GAPS: resolve_wbs_unknowns
+  post_readiness_audit:
+    child_workflow: .ai-engineering/workflows/post-readiness-audit.yaml
+    inputs:
+      source_run_id: '{{run_id}}'
+      source_workflow_state: '{{artifact_root}}/workflow_state.yaml'
+      source_run_manifest: '{{run_manifest}}'
+      requirement_path: '{{requirement_path}}'
+      scope: '{{scope}}'
+      scope_slug: '{{scope_slug}}'
+      run_id: '{{run_id}}'
+      artifact_root: '{{artifact_root}}'
+    execution:
+      execution_mode: fresh
+      ignore_previous_completion: true
+    statuses:
+      WORKFLOW_COMPLETE: DONE
+      WORKFLOW_BLOCKED_SOURCE_GAPS: BLOCKED
+      WORKFLOW_BLOCKED_DESIGN_GAPS: BLOCKED
+      WORKFLOW_BLOCKED_WBS_GAPS: BLOCKED
+      WORKFLOW_BLOCKED_WORKFLOW_INTEGRITY: BLOCKED
+      WORKFLOW_INPUT_REQUIRED: BLOCKED
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

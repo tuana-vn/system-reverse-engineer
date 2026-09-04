@@ -1,0 +1,41 @@
+version: '4.0'
+name: observability-traceability-analysis
+description: Trace observability/audit/log/metric/trace behavior from trigger and context provenance through emission
+  boundary and observable record, without assuming instrumentation placement.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/workflows/{{run_id}}.yaml
+inputs:
+  required:
+  - scope
+  - scope_slug
+  - analysis_question
+  optional:
+  - requirement_path
+  defaults:
+    artifact_root: docs/reverse-engineering
+steps:
+  trace_observability:
+    prompt: .ai-engineering/prompts/observability-traceability-analysis/01-observability-trace.md
+    skills:
+    - resume-reverse-engineering
+    - observability-traceability-analysis
+    - runtime-flow-analysis
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/analysis/{{scope_slug}}_observability_trace.md'
+    statuses:
+      OBSERVABILITY_TRACE_COMPLETE: DONE
+      OBSERVABILITY_TRACE_PARTIAL: resolve_observability_unknowns
+      OBSERVABILITY_TRACE_BLOCKED: resolve_observability_unknowns
+  resolve_observability_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: trace_observability
+    on_success: trace_observability
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

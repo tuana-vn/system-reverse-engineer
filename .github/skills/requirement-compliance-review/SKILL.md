@@ -1,7 +1,6 @@
 ---
 name: requirement-compliance-review
 description: Compare a user/customer requirement against a patch's reconstructed implemented behavior and the current-system baseline. Use to determine whether development is correct, complete, over-scoped, or likely to regress unrelated behavior.
-license: MIT
 ---
 
 # Requirement vs Implementation Compliance
@@ -28,6 +27,21 @@ For each capture:
 - ambiguity
 
 Do not invent acceptance criteria.
+
+## Requirement Fidelity Gate
+
+For every normalized mandatory field/behavior/condition, point to the exact authoritative requirement
+clause that requires it. If no clause exists, it must not be represented as a requirement obligation.
+It may appear only as an explicitly labeled `PROPOSED` design option/guidance.
+
+Required threshold:
+
+```text
+UNSUPPORTED_REQUIREMENT_EXPANSION = 0
+```
+
+Before a ready/pass verdict, reconcile executive summaries and aggregate counts with the row-level
+matrix. A claim such as "all requirements fail" is invalid when any matrix row is PASS/NO_GAP.
 
 ## Compare
 

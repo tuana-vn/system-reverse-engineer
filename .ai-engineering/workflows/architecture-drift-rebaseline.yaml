@@ -1,0 +1,49 @@
+version: '4.0'
+name: architecture-drift-rebaseline
+description: Detect architecture drift against the promoted baseline, adversarially verify material changes, and
+  update canonical current-system documentation only after source-backed rebaseline gates pass.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/workflows/{{run_id}}.yaml
+inputs:
+  required:
+  - scope
+  - scope_slug
+  optional:
+  - change_range
+  defaults:
+    artifact_root: docs/reverse-engineering
+steps:
+  detect_drift:
+    prompt: .ai-engineering/prompts/architecture-drift-rebaseline/01-detect-drift.md
+    skills:
+    - resume-reverse-engineering
+    - architecture-drift-detection
+    output: '{{artifact_root}}/reviews/{{scope_slug}}_architecture_drift.md'
+    statuses:
+      DRIFT_NOT_FOUND: DONE
+      DRIFT_FOUND_VERIFICATION_REQUIRED: verify_drift
+      DRIFT_ANALYSIS_BLOCKED: resolve_drift_unknowns
+  verify_drift:
+    prompt: .ai-engineering/prompts/architecture-drift-rebaseline/02-verify-and-rebaseline.md
+    skills:
+    - adversarial-baseline-audit
+    - reverse-engineering-coverage-audit
+    - baseline-source-of-truth-maintenance
+    output: '{{artifact_root}}/reviews/{{scope_slug}}_rebaseline_report.md'
+    statuses:
+      REBASELINE_COMPLETE: DONE
+      REBASELINE_NOT_READY: resolve_drift_unknowns
+      REBASELINE_BLOCKED_EXTERNAL: BLOCKED
+  resolve_drift_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: detect_drift
+    on_success: detect_drift
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

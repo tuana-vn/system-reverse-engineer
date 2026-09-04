@@ -1,7 +1,6 @@
 ---
 name: configuration-source-trace
 description: Trace behavior-changing configuration from its external/source definition through loader, key/default/override precedence, runtime state, consumer branch, and resulting behavior; use to close configuration-origin unknowns.
-license: MIT
 ---
 
 # Configuration Source Trace

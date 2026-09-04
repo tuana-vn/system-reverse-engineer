@@ -1,10 +1,9 @@
 ---
 name: integration-selection-analysis
 description: Determine exactly how concrete clients/adapters/protocols/backends are selected, with mandatory counterexample search and promotion gates before routing rules enter canonical decision matrices.
-license: MIT
 ---
 
-# Integration Selection Analysis — V2
+# Integration Selection Analysis — 4.0
 
 ## Core Question
 

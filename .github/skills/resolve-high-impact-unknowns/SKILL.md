@@ -1,10 +1,9 @@
 ---
 name: resolve-high-impact-unknowns
 description: Actively close HIGH/CRITICAL reverse-engineering unknowns by dispatching targeted source tracing, requiring search-exhaustion evidence before external blocking, and preventing premature baseline-readiness claims.
-license: MIT
 ---
 
-# Resolve High-Impact Unknowns
+# Resolve High-Impact Unknowns — 4.0
 
 ## Mission
 
@@ -17,7 +16,7 @@ Read:
 
 ```text
 00_open_questions.md
-00_workflow_state.md
+workflow_state.yaml  # runner-owned authoritative state for the active workflow
 00_investigation_coverage.md
 00_current_understanding.md
 00_evidence_ledger.md
@@ -45,13 +44,25 @@ Make it specific and falsifiable.
 Bad:
 
 ```text
-Communication config unknown.
+Checkout timeout source is unknown.
 ```
 
 Better:
 
 ```text
-Which source/key/default/override chain determines runtime communication mode used by Factory X for operation family Y?
+Which configuration source, key, default, and override chain determines the checkout timeout used by the Python order worker?
+```
+
+Also make provenance/exposure questions falsifiable.
+
+Examples:
+
+```text
+Under which checkout request conditions is the promotion code retrieved, normalized, and returned in the order response?
+```
+
+```text
+Which REST endpoints, message consumers, or scheduled jobs can reach the C++ pricing-engine boundary after enumerating every source-visible invocation site?
 ```
 
 ### 2. Determine Investigation Domain
@@ -74,6 +85,12 @@ end-to-end operation behavior
 integration routing
 → /integration-selection-analysis
 
+field/data provenance
+→ /runtime-flow-analysis plus targeted source trace through retrieval → mapping → output
+
+external exposure from a known downstream boundary
+→ boundary → exposure closure using caller/reference tracing
+
 other
 → targeted source trace using system-reverse-engineer rules
 ```
@@ -91,12 +108,46 @@ Use alternate anchors:
 - startup/bootstrap
 - tests
 - migrations/scripts
-- call sites
+- all direct call/construction sites
+- caller fan-out from impacted downstream boundaries
+- serializers/mappers/parsers
 - related constants/enums
 
 ### 4. Record Search Coverage
 
 Before unresolved closure, record what was actually searched.
+
+
+### 4A. Provenance / Exposure Closure Requirements
+
+When the unknown concerns externally meaningful data, do not resolve it until the material chain is closed:
+
+```text
+trigger
+→ source/downstream retrieval
+→ source data
+→ parse/transform
+→ mapping/state
+→ serialization/output
+→ observable result
+```
+
+When the unknown concerns external reachability of a known downstream boundary:
+
+```text
+boundary
+← ALL direct invocation/construction sites
+← ALL caller chains
+← external entry points / proven internal roots
+```
+
+Do not resolve reachability based on one representative endpoint.
+
+If one direct invocation site remains unresolved, the question remains:
+
+`SOURCE_SEARCH_PENDING`
+
+or `SOURCE_SEARCH_IN_PROGRESS`.
 
 ### 5. Resolve
 
@@ -113,6 +164,9 @@ SOURCE_SEARCH_PENDING
 `EXTERNALLY_BLOCKED` requires:
 
 - repository search sufficiently exhausted
+- alternate anchors used
+- provenance chain traced as far as source allows when data/output-related
+- all source-visible invocation sites classified when reachability-related
 - code-side boundary/injection point identified when possible
 - exact missing external artifact/value/evidence named
 
@@ -122,8 +176,8 @@ Resolved architectural facts still pass `/claim-verification-and-promotion` befo
 
 ## Required Closure Matrix
 
-| Q-ID | Impact | Question | Investigation Performed | Source Result | Closure State | Evidence/Artifact | Remaining External Evidence |
-|---|---|---|---|---|---|---|---|
+| Q-ID | Impact | Question | Investigation Performed | Provenance / Exposure Closure | Source Result | Closure State | Evidence/Artifact | Remaining External Evidence |
+|---|---|---|---|---|---|---|---|---|
 
 ## Loop
 
@@ -135,7 +189,8 @@ HIGH/CRITICAL SOURCE_SEARCH_PENDING = 0
 
 or context/tool limits require `PARTIAL_RESUMABLE`.
 
-If limits are hit, persist exact next Q-ID, search anchor, and skill to run.
+If limits are hit, persist exact next Q-ID, unresolved provenance/exposure link,
+search anchor, and skill to run.
 
 ## Output
 
@@ -149,9 +204,30 @@ Also update:
 
 ```text
 00_open_questions.md
-00_workflow_state.md
+workflow_state.yaml  # runner-owned authoritative state for the active workflow
 00_investigation_coverage.md
 00_evidence_ledger.md
 ```
 
 Do not print the full report to console.
+
+
+## 4.0 Source-Fact Boundary
+
+`RESOLVED_VERIFIED` applies to the source question, not to downstream design recommendations.
+
+```text
+NO CURRENT MECHANISM FOUND
+!=
+SPECIFIC FUTURE MECHANISM VERIFIED
+```
+
+If implementation guidance is useful, label it `PROPOSED` and do not promote it into the evidence
+ledger as source truth.
+
+
+## 4.0 Run-Scoped State Isolation
+
+When this skill is invoked by a workflow whose `state_path` is under
+`docs/reverse-engineering/runs/<run_id>/`, do not create or update ``workflow_state.md` or any second state file. The runner owns the single authoritative
+workflow-declared YAML state file.

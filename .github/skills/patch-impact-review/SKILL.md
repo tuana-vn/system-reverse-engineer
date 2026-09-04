@@ -1,39 +1,39 @@
 ---
 name: patch-impact-review
-description: Review a patch or Git diff against the evidence-backed current-system baseline, trace impact from changed code through externally observable contracts and runtime dependencies, identify compatibility/regression risks, and derive evidence-backed test viewpoints, behavior matrices, and expected results.
+description: Review a patch or Git diff against the evidence-backed current-system baseline, trace changed behavior through observable surfaces, runtime dependencies, integrations, and field/data provenance, identify compatibility/regression risks, and derive evidence-backed verification. Require scope isolation, provenance, and completion gates before declaring impact or sufficiency.
 license: MIT
 ---
 
-# Patch Impact Review V2 — Contract + Runtime + Test Impact
+# Patch Impact Review 4.0 — Contract + Runtime + Exposure Closure + Provenance + Test Impact
 
 ## Purpose
 
 A patch impact review is NOT a changed-function inventory.
 
-The review must determine:
-
 ```text
 PATCHED CODE
-→ affected runtime behavior
-→ affected externally observable contract
-→ affected integration/data/state contract
+→ changed runtime rule
+→ affected observable surface
+→ affected input/output contract
+→ affected field/data provenance
+→ affected integration/data/state behavior
 → compatibility/regression risk
 → required verification
 ```
 
 A changed method is only the starting point.
 
-## Baseline Safety
+## 0. Baseline Safety
 
-A patch is proposed behavior until independently verified as merged/current behavior.
-
-- Do not update canonical reverse-engineering memory from the patch alone.
-- Use CURRENT SOURCE as authority for baseline behavior.
-- Use the patch/diff as candidate future behavior.
-- Use requirements/specifications as intended behavior.
+- CURRENT SOURCE = baseline behavior authority.
+- PATCH/DIFF = candidate changed behavior.
+- REQUIREMENT/SPEC = intended behavior.
+- Promoted reverse-engineering memory is supporting evidence, not a substitute for current source.
 - If requirement, source, and patch disagree, show the disagreement explicitly.
+- Never update canonical baseline memory from an unmerged patch.
+- Do not reuse a previous review conclusion as evidence.
 
-## Inputs
+## 1. Inputs
 
 Use all applicable inputs:
 
@@ -41,65 +41,101 @@ Use all applicable inputs:
 - current source
 - promoted reverse-engineering baseline
 - requirement / issue / customer clarification
-- API specification / OpenAPI / annotations / controllers
+- API/interface specification
 - tests and fixtures
 - integration protocol definitions
 - configuration and persistence schema
 
-Do not require every input to exist. Record evidence gaps instead of guessing.
+Record missing evidence instead of guessing.
 
-# 1. Reconstruct the Change at Three Levels
+## 2. Normalize Intended Behavior
 
-## 1.1 Business Purpose
+Create atomic rules `R-001`, `R-002`, ...
 
+For each rule capture:
+
+- observable surface / endpoint / operation
+- trigger and preconditions
+- supported inputs/parameters
+- expected behavior and output/state
+- failure/exception behavior
+- compatibility requirement
+- explicit exclusions / non-applicable surfaces
+- ambiguity
+
+Do not invent acceptance criteria.
+
+### 2.1 Canonical Requirement / Scope Matrix
+
+When a requirement exists, create:
+
+| Rule | Surface / Operation | Applies? | Condition | Expected Observable Behavior |
+|---|---|---:|---|---|
+
+Rules:
+
+- Evaluate each row independently.
+- Do not transfer conditions between endpoints/surfaces/operations.
+- A condition applies only where explicitly assigned.
+- If scope is ambiguous, mark `UNKNOWN`.
+- Use this matrix as authoritative scope for impact and sufficiency judgments.
+
+## 3. Reconstruct the Change at Three Levels
+
+### 3.1 Business Purpose
 Why the change is needed.
 
-## 1.2 Observable Functional Behavior
-
-What a caller, API consumer, operator, external system, or persisted state can observe before vs after.
+### 3.2 Observable Functional Behavior
+What an external caller, operator, job, integration, or persisted state can observe before vs after.
 
 For a bug fix:
 
 ```text
-Observed / Reported Problem
+Observed Problem
 → PATCH-IMPLIED ROOT CAUSE
 → Changed Rule
 → Corrected Observable Behavior
 ```
 
-Label patch-implied root cause unless independently source-verified.
+Label patch-implied root cause unless source-verified.
 
-## 1.3 Technical Implementation
+### 3.3 Technical Implementation
 
-How the patch implements the behavior:
+Identify:
 
-- changed files
-- classes/functions/methods
-- conditions/branches
-- data transformations
-- integrations
-- configuration/state changes
+- changed files/symbols
+- changed conditions/branches
+- transformations
+- integration calls
+- .ai-engineering/state-templates/configuration changes
 
-# 2. Mandatory Impact-Surface Discovery
+Do not infer correctness from implementation shape.
 
-For EVERY semantically changed behavior, trace both directions:
+## 4. Mandatory Impact-Surface Discovery
+
+For every semantically changed behavior, trace both directions.
+
+### Upstream / Exposure Trace
 
 ```text
-UPSTREAM / EXPOSURE TRACE
 changed symbol
 ← callers
 ← service/facade/handler
-← controller/resource/router
-← external endpoint/event/job/CLI entry point
-
-DOWNSTREAM / EFFECT TRACE
-changed symbol
-→ callees/utilities
-→ external client/DB/message/config/file
-→ response/state/side effect
+← controller/resource/router/entry point
+← endpoint/event/job/CLI/GUI/RPC surface
 ```
 
-Stop only when the behavior is classified as one of:
+### Downstream / Effect Trace
+
+```text
+changed symbol
+→ callees/utilities
+→ integration/client/DB/message/config/file
+→ parser/transformation
+→ response/.ai-engineering/state-templates/side effect
+```
+
+Stop only at:
 
 ```text
 EXTERNALLY_EXPOSED
@@ -109,113 +145,186 @@ EXTERNAL_INTEGRATION_ONLY
 SOURCE_NOT_RESOLVED
 ```
 
-Do NOT stop at the first caller or callee.
+Do not stop at the first caller or callee.
 
-# 3. REST / HTTP API Contract Impact — Mandatory When Reachable
 
-If any changed behavior is reachable from REST/HTTP, identify the exact affected API surface.
+## 4A. Boundary → Exposure Closure Gate
 
-For each affected endpoint inspect:
+The upstream trace from a changed symbol is not sufficient when impact is discovered
+at a downstream integration/runtime boundary.
 
-## Endpoint identity
+Whenever an impacted boundary is confirmed, such as:
 
-- API/version
-- HTTP method
-- route/path
-- controller/resource/handler method
-- applicable media types
+- native executable / external process invocation
+- RPC/SDK operation
+- DB query
+- message producer
+- file/config writer
+- persistence operation
+- downstream service call
 
-## Request contract
+treat that boundary as a new reverse-trace seed.
 
-- path parameters
-- query parameters
-- headers
-- cookies if applicable
-- request body schema
-- nested body fields
-- required/optional status
-- nullability
-- defaults
-- allowed values/enums
-- ranges/length/format
-- cross-field / parameter-combination rules
-- conditional requirements
+### Required algorithm
 
-## Response contract
+1. Enumerate ALL source-visible direct invocation/construction sites of the boundary.
+2. For EACH site, trace callers upward independently.
+3. Continue until an external entry point or proven non-external root is reached.
+4. If caller chains fan out, follow every material branch.
+5. If caller chains converge, preserve the distinct external entry points.
+6. Do not stop after finding one representative endpoint.
 
-- HTTP status codes
-- response body/schema
-- fields added/removed/changed
-- field type/format changes
-- conditional field presence
-- null vs omitted behavior
-- response headers
-- ordering/pagination/filtering where relevant
-
-## Error contract
-
-- validation errors
-- domain errors
-- external integration errors
-- error code/message mapping
-- HTTP status mapping
-
-## Compatibility contract
-
-Check explicitly:
-
-- old request still valid?
-- old request produces same result?
-- new parameter changes default behavior?
-- parameter omitted vs null vs empty?
-- old clients can parse new response?
-- previously returned fields removed/renamed/retyped?
-- new validation rejects previously valid requests?
-- default path invokes more expensive downstream behavior?
-
-If no REST endpoint is affected, state `NO_DIRECT_REST_API_IMPACT` and provide the source trace proving why.
-
-# 4. Non-REST Contract Impact
-
-Inspect all applicable boundaries:
-
-- CLI command/options
-- RMI/RPC
-- external SDK/API calls
-- database schema/query/keys
-- message/event schema and topic/queue
-- files/configuration generated or consumed
-- cache keys
-- scheduled jobs/batch inputs
-- authentication/authorization inputs
-- logs/audit/metrics where behaviorally significant
-
-For each boundary identify:
+Required trace:
 
 ```text
-input → transformation → output / side effect → failure behavior
+impacted boundary
+← invocation/construction site
+← business/service caller
+← handler/controller/resource/router
+← exact external operation
 ```
 
-# 5. Data and State Impact
+### Boundary terminology
 
-Trace changed values through their lifecycle.
+Do not confuse a downstream CLI integration with a product CLI entry point:
 
+- `DOWNSTREAM_PROCESS_INTEGRATION`: the application invokes an external executable or native process.
+- `PRODUCT_COMMAND_ENTRY_POINT`: a user/operator enters the application through its own command interface.
+
+### Exposure Closure Matrix
+
+| Boundary ID | Impacted Boundary | Invocation Site | Caller Chain | External Entry Type | Method | Exact Path / Operation | Classification | Evidence |
+|---|---|---|---|---|---|---|---|---|
+
+Classifications:
+
+```text
+REST_REACHABLE
+PRODUCT_COMMAND_REACHABLE
+JOB_REACHABLE
+EVENT_REACHABLE
+GUI_REACHABLE
+RPC_REACHABLE
+INTERNAL_ONLY
+SOURCE_NOT_RESOLVED
+```
+
+### Closure rule
+
+An impacted boundary is not exposure-complete until every source-visible direct
+invocation/construction site is classified.
+
+`NO_DIRECT_REST_API_IMPACT` or any equivalent no-impact claim is forbidden while
+a direct invocation site remains unresolved.
+
+This gate is mandatory even when a broad external-interface inventory was already performed.
+
+
+## 5. Input / Parameter Semantics Gate
+
+When changed behavior is input-driven, distinguish:
+
+- valid supported input/parameter
+- unsupported input/parameter name
+- wrong-case input/parameter name
+- invalid value of a supported input/parameter
+- invalid combination of supported inputs/parameters
+- omitted / null / empty / default
+
+Do not conflate these categories.
+
+Preserve exact specification rules for case sensitivity, defaults, and unsupported inputs.
+Do not infer error behavior from naming alone.
+
+## 6. External Contract Impact
+
+Inspect all reachable external boundaries.
+
+### REST / HTTP
 Check:
+
+- method/path/version
+- path/query/header/body fields
+- required/optional/null/default
+- allowed values/format/range
+- parameter-combination rules
+- case sensitivity / unsupported-parameter behavior
+- status codes
+- response fields/type/format
+- conditional field presence
+- null vs omitted
+- error mapping
+- filtering/pagination/ordering
+- backward compatibility
+
+If no REST impact, state `NO_DIRECT_REST_API_IMPACT` and prove it with the exposure trace.
+
+### Non-REST
+Inspect applicable:
+
+- CLI
+- GUI
+- RPC
+- external SDK/API
+- DB
+- event/message
+- file/configuration
+- cache
+- batch/scheduler
+- authn/authz
+- logs/audit/metrics when behaviorally significant
+
+For each boundary trace:
+
+```text
+input → transformation → output/side effect → failure behavior
+```
+
+## 7. Field / Data Provenance Gate
+
+For every changed, introduced, filtered, normalized, persisted, or conditionally exposed value, prove its lifecycle before declaring impact or no-impact.
+
+| Surface | Field/Data | Trigger/Condition | Source Retrieval | Source Field/Data | Transform/Normalize | Mapping/Storage | Serialization/Output | Final Observable Behavior | Evidence |
+|---|---|---|---|---|---|---|---|---|---|
+
+Determine:
+
+1. When is source data obtained?
+2. Which command/query/call/branch makes it available?
+3. Where is it parsed?
+4. Where is it transformed/normalized?
+5. Where is it mapped/stored?
+6. What happens when it is absent or not retrieved?
+7. How is it serialized/emitted/consumed externally?
+8. What observable behavior results?
+
+Important:
+
+- Conditional behavior may be implemented indirectly by conditional retrieval.
+- Do not require an explicit output-layer condition if earlier data-flow decisions already produce correct behavior.
+- A changed output field does not imply the serializer is the root of impact.
+- Extra internal retrieval is not automatically a contract violation.
+- Report evidenced performance or side-effect risk separately.
+
+This gate applies to REST responses, CLI output, persisted state, messages, configuration, identifiers, and other externally meaningful values.
+
+## 8. Data and State Impact
+
+Trace changed values through:
 
 - parsing
 - validation
-- normalization
-- conversion
-- storage/persistence
-- comparison/equality
-- map/cache keys
+- normalization/conversion
+- persistence
+- equality/comparison
+- cache/map keys
 - serialization/deserialization
 - response mapping
-- external-command construction
+- command construction
 - configuration generation
 - logging/display
 
-For identifier-like values additionally check:
+For identifier-like values also check:
 
 - prefix/range/length assumptions
 - numeric/string conversion
@@ -224,114 +333,139 @@ For identifier-like values additionally check:
 - uniqueness/collision
 - backward-compatible lookup
 
-# 6. Compatibility and Regression Impact
+## 9. Compatibility and Regression Impact
 
 Evaluate separately:
 
-## Functional compatibility
+- functional compatibility
+- API compatibility
+- integration compatibility
+- data compatibility
+- performance compatibility
+- security compatibility when intersected
 
-Existing behavior remains valid unless intentionally changed.
+For performance, check:
 
-## API compatibility
-
-Request and response contract compatibility.
-
-## Integration compatibility
-
-External command/API/protocol compatibility.
-
-## Data compatibility
-
-Old persisted/configured/cached values remain usable.
-
-## Performance compatibility
-
-Check whether the patch changes:
-
-- number of external calls
-- amount of data requested/returned
-- more expensive command options/query modes
+- external call count
+- data volume
+- expensive query/command modes
 - loops/retries
-- cache behavior
-- database query shape
+- cache changes
+- DB query shape
 
-## Security compatibility
+Do not misclassify secondary performance/design concerns as requirement violations unless the requirement covers them.
 
-Check authorization/validation/input exposure only when the changed path intersects them.
-
-# 7. Mandatory Behavior Matrix
-
-Do not describe only individual functions.
-
-Derive the behavior-driving dimensions from requirement + current source + patch.
-
-Typical dimensions:
-
-- endpoint / operation
-- selector / request mode
-- parameter present/absent/value class
-- body field combinations
-- storage/model/type
-- feature/config flag
-- upgrade/legacy state
-- external response state
-
-For small finite dimensions, enumerate all meaningful combinations.
-For large dimensions, use equivalence classes + boundaries + pairwise/risk-based combinations.
-
-Required table:
+## 10. Mandatory Before-vs-After Behavior Matrix
 
 | Case ID | Entry Point / Endpoint | Preconditions | Request / Input Combination | Baseline Behavior | Patched Behavior | Expected Behavior | Compatibility | Evidence |
 |---|---|---|---|---|---|---|---|---|
 
-`Expected Behavior` must be evidence-backed.
-If the requirement does not define it and source cannot establish it, write `EXPECTED_BEHAVIOR_UNRESOLVED` and name the missing evidence. Do not invent an oracle.
+Derive dimensions from requirement + current source + patch.
 
-# 8. Test Viewpoint Derivation
+If expected behavior cannot be established, write:
 
-For each impacted surface derive only applicable viewpoints.
+`EXPECTED_BEHAVIOR_UNRESOLVED`
 
-Candidate viewpoints:
+and name the missing evidence.
 
-### Contract / API
-- existing request backward compatibility
-- new parameter/field positive cases
+## 11. Impact Claim Completion Gate
+
+Do not declare:
+
+- `IMPACTED`
+- `NOT_IMPACTED`
+- `PATCH_SUFFICIENT`
+- `PATCH_PARTIALLY_SUFFICIENT`
+- `PATCH_INSUFFICIENT`
+
+until the applicable chain is proven.
+
+For externally observable changes:
+
+```text
+changed code
+→ runtime path
+→ impacted downstream boundary (when applicable)
+→ ALL invocation/construction sites
+→ ALL reachable external surfaces
+→ input condition
+→ downstream/data provenance
+→ mapping/.ai-engineering/state-templates/output
+→ externally observable result
+```
+
+For `NO_DIRECT_*_IMPACT`, prove that the exposure trace terminates before an external surface.
+
+For changed response/output/data fields, the Field / Data Provenance Gate is mandatory.
+
+If a required link cannot be proven:
+
+- use `SOURCE_NOT_RESOLVED`
+- use `EXPECTED_BEHAVIOR_UNRESOLVED` where applicable
+- do not fill the gap with assumptions
+
+## 12. Adversarial Reverification
+
+Before finalizing every HIGH/CRITICAL impact, no-impact claim, or insufficiency claim:
+
+- search alternate callers
+- search alternate downstream paths
+- search earlier conditional retrieval/mapping
+- search serializers/mappers/configuration that contradict the initial finding
+- verify conditions were not borrowed from another surface
+- inspect tests that could prove or disprove the finding
+
+A user correction is not evidence.
+
+If challenged:
+
+- reopen the finding
+- re-trace source
+- search counterevidence
+- revise only when source evidence supports revision
+
+Do not change a finding merely to agree with the user.
+
+## 13. Test Viewpoint Derivation
+
+Derive only applicable viewpoints.
+
+### Contract/API
+- backward compatibility
+- new field/parameter positive cases
 - omitted/null/empty/default
-- valid combinations
-- invalid combinations
+- valid/invalid combinations
+- unsupported/wrong-case names when applicable
 - boundary/format/range
-- response field presence/absence/nullability
-- HTTP status and error code
-- version compatibility
+- response presence/absence/nullability
+- HTTP/error behavior
 
-### Runtime / business rule
+### Runtime/business rule
 - branch true/false
 - model/type/state variants
 - old/new representation
 - fallback/error paths
 
 ### Integration
-- exact external command/options/request
+- exact downstream command/options/request
 - parser mapping
 - missing/extra downstream fields
 - downstream error mapping
 
 ### Data/state
 - persistence/read-back
-- key lookup/equality
-- cache behavior
+- key/equality
+- cache
 - migration/legacy data
 
-### Non-functional regression
-- no additional expensive downstream mode for unchanged requests
-- no additional call count where performance-sensitive
-- idempotency/concurrency only if the changed path involves them
+### Non-functional
+- no extra expensive downstream mode for unchanged requests
+- no extra call count where performance-sensitive
+- idempotency/concurrency only when impacted
 
-Do NOT create generic security/performance/concurrency tests when there is no source-backed impact.
+Do not create generic tests without source-backed impact.
 
-# 9. Test-Level Selection
-
-Map each test to the lowest level that can prove the behavior, while retaining end-to-end coverage for externally observable contracts.
+## 14. Test-Level Selection
 
 Use:
 
@@ -344,103 +478,126 @@ END_TO_END
 REGRESSION
 ```
 
-Do not propose only unit tests for an API-visible change.
+Use the lowest level that proves the rule, while retaining end-to-end coverage for external contracts.
 
-# 10. Required Test Matrix
+## 15. Required Test Matrix
 
-| Test ID | Level | Endpoint / Entry Point | Viewpoint | Preconditions | Input / Request | Expected Downstream Interaction | Expected Response / State | Regression Purpose | Evidence |
-|---|---|---|---|---|---|---|---|---|---|
+| Test ID | Level | Endpoint / Entry Point | Viewpoint | Preconditions | Input / Request | Expected Downstream Interaction | Expected Data Provenance / State | Expected Response / State | Regression Purpose | Evidence |
+|---|---|---|---|---|---|---|---|---|---|---|
 
 Every HIGH/CRITICAL impact must map to at least one concrete test.
-Every changed API contract rule must map to at least one API_CONTRACT or higher-level test unless technically impossible; explain exceptions.
+Every changed external contract rule must map to API_CONTRACT or higher unless technically impossible.
 
-# 11. Mandatory Impact Inventories
+## 16. Mandatory Inventories
 
-## 11.1 Changed Code Surface
+### Changed Code Surface
 
 | File | Class/Symbol | Change | Runtime Role |
 |---|---|---|---|
 
-## 11.2 Runtime Impact
+### Runtime Impact
 
 | Class/Component | Method/Behavior | Why Impacted | Direct/Indirect | Patch Touches It? | Evidence |
 |---|---|---|---|---|---|
 
-## 11.3 API Contract Impact
+### Boundary → Exposure Closure
+
+| Boundary | Invocation Site | Caller Chain | External Entry Type | Method | Exact Path / Operation | Classification | Evidence |
+|---|---|---|---|---|---|---|---|
+
+### API Contract Impact
 
 | API | Method + Path | Request Contract Impact | Response Contract Impact | Error/Status Impact | Compatibility Risk | Evidence |
 |---|---|---|---|---|---|---|
 
-If none, include one row stating `NO_DIRECT_REST_API_IMPACT` with evidence.
-
-## 11.4 External Contract Impact
+### External Contract Impact
 
 | Boundary | Operation | Input Before/After | Output Before/After | Failure Impact | Evidence |
 |---|---|---|---|---|---|
 
-# 12. Risk Table
+### Field / Data Provenance Impact
+
+| Surface | Field/Data | Before Provenance | After Provenance | Observable Change | Risk | Evidence |
+|---|---|---|---|---|---|---|
+
+## 17. Risk Table
 
 | Risk ID | Surface | Scenario | Severity | Likelihood | Evidence | Required Verification |
 |---|---|---|---|---|---|---|
 
-Severity and likelihood must be justified from the actual behavior; do not assign decorative ratings.
+Severity and likelihood must be justified by actual behavior.
 
-# 13. Coverage Gate
-
-Before finalizing, answer explicitly:
+## 18. Coverage Gate
 
 ```text
+[ ] Requirement/scope matrix created when requirement exists
 [ ] Changed functions traced to callers and callees
-[ ] API reachability determined
-[ ] Affected endpoint(s) identified or NO_DIRECT_REST_API_IMPACT proven
-[ ] Request parameters/body/header impact checked
+[ ] External reachability determined
+[ ] Every impacted downstream boundary has all direct invocation/construction sites enumerated
+[ ] Every invocation site is reverse-traced to an external or proven internal root
+[ ] Shared runtime/integration paths enumerate all distinct external entry points
+[ ] Affected endpoints/surfaces identified or no-impact proven
+[ ] Input/parameter semantics checked
+[ ] Request/body/header impact checked
 [ ] Response/status/error contract checked
+[ ] Field/data provenance proven for changed output/data
 [ ] External integrations checked
 [ ] Data/persistence/config/cache impact checked
 [ ] Backward compatibility checked
 [ ] Performance-sensitive downstream behavior checked
-[ ] Behavior matrix created
-[ ] Test viewpoints derived from actual impact
+[ ] Before-vs-after behavior matrix created
 [ ] Expected behavior has an evidence-backed oracle
+[ ] HIGH/CRITICAL claims adversarially reverified
 [ ] Every HIGH/CRITICAL impact maps to a test
+[ ] No-impact claims have a terminating source trace
 ```
 
 The review is incomplete if any applicable item is omitted without explanation.
 
-# 14. Output
+## 19. Output
 
-Default output:
+Default:
 
-```text
-docs/reverse-engineering/reviews/<patch>-impact-review.md
-```
+`docs/reverse-engineering/reviews/<patch>-impact-review.md`
 
 Required sections:
 
 1. Executive Conclusion
 2. Requirement / Intended Behavior
-3. Patch Intent and Implementation Summary
-4. Changed Code Surface
-5. Exposure and Runtime Flow
-6. REST / HTTP API Contract Impact
-7. External Integration Contract Impact
-8. Data / State / Configuration Impact
-9. Before-vs-After Behavior Matrix
-10. Compatibility and Regression Risks
-11. Missing / Insufficient Patch Coverage
-12. Test Viewpoints
-13. Test Matrix with Expected Behavior
-14. Evidence Index
-15. Coverage Gate Result
+3. Canonical Requirement / Scope Matrix
+4. Patch Intent and Implementation Summary
+5. Changed Code Surface
+6. Exposure and Runtime Flow
+7. REST / HTTP API Contract Impact
+8. External Integration Contract Impact
+9. Field / Data Provenance Impact
+10. Data / State / Configuration Impact
+11. Before-vs-After Behavior Matrix
+12. Compatibility and Regression Risks
+13. Missing / Insufficient Patch Coverage
+14. Test Viewpoints
+15. Test Matrix with Expected Behavior
+16. Evidence Index
+17. Coverage Gate Result
 
-# 15. Final Decision
+## 20. Final Decision
 
-Use project-appropriate decision values, for example:
+Use:
 
 ```text
 PATCH_SUFFICIENT
 PATCH_PARTIALLY_SUFFICIENT
 PATCH_INSUFFICIENT
+CANNOT_VERIFY
 ```
 
-The decision must be based on requirement coverage + observable contract impact + regression evidence, not on changed-file count.
+Base the decision on:
+
+```text
+requirement scope
++ observable contract impact
++ complete runtime/data provenance
++ compatibility/regression evidence
+```
+
+not changed-file count or implementation shape.

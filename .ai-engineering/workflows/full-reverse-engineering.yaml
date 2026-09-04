@@ -1,0 +1,166 @@
+version: '4.0'
+name: full-reverse-engineering
+description: Full repository reverse engineering executed as an explicit workflow over existing skills. Runtime
+  execution must not create or modify agent-infrastructure files under .ai-engineering or .github.
+runner_skill: run-engineering-workflow
+state_path: '{{artifact_root}}/workflow_state.yaml'
+inputs:
+  required:
+  - run_id
+  optional:
+  - scope
+  defaults:
+    artifact_root: docs/reverse-engineering
+    scope: repository-wide current-system baseline
+steps:
+  discovery_and_runtime:
+    inline_instruction: 'Reconstruct the current repository topology, inbound/startup surface, and representative
+      runtime flows using current source and runtime/config evidence as primary truth. Apply the named existing
+      skills directly; do not invoke slash sub-skills, create helper prompts, create helper workflows, or modify
+      .ai-engineering/.github. Update canonical evidence artifacts and write the declared stage report with exactly
+      one WORKFLOW_GATE. Use DISCOVERY_COMPLETE only when representative current flows and material entry surfaces
+      are source-backed; otherwise use DISCOVERY_PARTIAL.
+
+      '
+    skills:
+    - reverse-engineering-bootstrap
+    - runtime-flow-analysis
+    output: '{{artifact_root}}/01_discovery_and_runtime.md'
+    statuses:
+      DISCOVERY_COMPLETE: integration_configuration_boundaries
+      DISCOVERY_PARTIAL: resolve_discovery_unknowns
+  integration_configuration_boundaries:
+    inline_instruction: 'Trace integration selection, concrete runtime binding, behavior-changing configuration
+      provenance, and external boundaries/exposure. Apply only the named existing skills directly. Do not materialize
+      skills into new prompts/workflows and do not modify .ai-engineering/.github. Update canonical evidence artifacts
+      and write the declared stage report with exactly one WORKFLOW_GATE. Use INTEGRATION_SURFACE_COMPLETE only
+      when high-impact routing/binding/configuration/boundary claims are source-backed or explicitly externally
+      blocked.
+
+      '
+    skills:
+    - integration-selection-analysis
+    - runtime-binding-verification
+    - configuration-source-trace
+    - runtime-flow-analysis
+    output: '{{artifact_root}}/03_integration_configuration_boundaries.md'
+    statuses:
+      INTEGRATION_SURFACE_COMPLETE: persistence_failure_lifecycle
+      INTEGRATION_SURFACE_PARTIAL: resolve_integration_unknowns
+  persistence_failure_lifecycle:
+    inline_instruction: 'Determine whether persistence/data-model concerns are applicable and reconstruct material
+      persistence, error, retry, fallback, lifecycle, concurrency, and async behavior. Apply only the named existing
+      skills directly. Do not create helper methodology files or modify .ai-engineering/.github. Record NOT_APPLICABLE
+      with evidence where appropriate. Write the declared stage report with exactly one WORKFLOW_GATE.
+
+      '
+    skills:
+    - persistence-schema-reverse-engineering
+    - runtime-flow-analysis
+    output: '{{artifact_root}}/06_persistence_failure_lifecycle.md'
+    statuses:
+      SYSTEM_BEHAVIOR_COMPLETE: evidence_hardening
+      SYSTEM_BEHAVIOR_PARTIAL: resolve_behavior_unknowns
+  evidence_hardening:
+    inline_instruction: 'Verify high-impact candidate claims against current source, search counterexamples and
+      alternate paths, close source-resolvable HIGH/CRITICAL unknowns, and promote only defensible claims. Apply
+      only the named existing skills directly. Do not create helper prompts/workflows and do not modify .ai-engineering/.github.
+      Write the declared stage report with exactly one WORKFLOW_GATE. If source-resolvable HIGH/CRITICAL gaps remain,
+      use EVIDENCE_NOT_READY rather than self-authorizing readiness.
+
+      '
+    skills:
+    - claim-verification-and-promotion
+    - resolve-high-impact-unknowns
+    output: '{{artifact_root}}/08_evidence_hardening.md'
+    statuses:
+      EVIDENCE_HARDENED: adversarial_readiness
+      EVIDENCE_NOT_READY: resolve_evidence_unknowns
+      EVIDENCE_EXTERNAL_BLOCKERS_ONLY: adversarial_readiness
+  adversarial_readiness:
+    inline_instruction: 'Adversarially challenge the promoted baseline and audit investigation coverage. Re-check
+      high-impact routing, binding, configuration, data provenance, boundary/exposure, persistence, fallback, lifecycle,
+      and scope-isolation claims against current source. Apply only the named existing skills directly. Do not create
+      helper prompts/workflows and do not modify .ai-engineering/.github. Consolidate the final source-backed baseline
+      into the declared output and end it with exactly one WORKFLOW_GATE. Never return BASELINE_READY while source-resolvable
+      HIGH/CRITICAL gaps or unresolved adversarial contradictions remain.
+
+      '
+    skills:
+    - adversarial-baseline-audit
+    - reverse-engineering-coverage-audit
+    - baseline-source-of-truth-maintenance
+    output: '{{artifact_root}}/12_final_reverse_engineered_baseline.md'
+    statuses:
+      BASELINE_READY: DONE
+      BASELINE_READY_WITH_EXTERNAL_BLOCKERS: DONE
+      NOT_READY_HIGH_IMPACT_GAPS: resolve_adversarial_unknowns
+      PARTIAL_RESUMABLE: BLOCKED
+  resolve_discovery_unknowns:
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
+      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
+      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    skills:
+    - resolve-high-impact-unknowns
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/09_discovery_unknown_resolution.md'
+    retry_step: discovery_and_runtime
+    statuses:
+      HIGH_IMPACT_UNKNOWNS_RESOLVED: discovery_and_runtime
+      HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: discovery_and_runtime
+      HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
+  resolve_integration_unknowns:
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
+      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
+      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    skills:
+    - resolve-high-impact-unknowns
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/09_integration_unknown_resolution.md'
+    retry_step: integration_configuration_boundaries
+    statuses:
+      HIGH_IMPACT_UNKNOWNS_RESOLVED: integration_configuration_boundaries
+      HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: integration_configuration_boundaries
+      HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
+  resolve_behavior_unknowns:
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
+      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
+      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    skills:
+    - resolve-high-impact-unknowns
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/09_behavior_unknown_resolution.md'
+    retry_step: persistence_failure_lifecycle
+    statuses:
+      HIGH_IMPACT_UNKNOWNS_RESOLVED: persistence_failure_lifecycle
+      HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: persistence_failure_lifecycle
+      HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
+  resolve_evidence_unknowns:
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
+      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
+      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    skills:
+    - resolve-high-impact-unknowns
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/09_evidence_unknown_resolution.md'
+    retry_step: evidence_hardening
+    statuses:
+      HIGH_IMPACT_UNKNOWNS_RESOLVED: evidence_hardening
+      HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: evidence_hardening
+      HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
+  resolve_adversarial_unknowns:
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
+      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
+      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    skills:
+    - resolve-high-impact-unknowns
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/09_adversarial_unknown_resolution.md'
+    retry_step: adversarial_readiness
+    statuses:
+      HIGH_IMPACT_UNKNOWNS_RESOLVED: adversarial_readiness
+      HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: adversarial_readiness
+      HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

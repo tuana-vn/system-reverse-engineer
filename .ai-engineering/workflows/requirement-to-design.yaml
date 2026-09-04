@@ -1,0 +1,119 @@
+version: '4.0'
+name: requirement-to-design
+description: Source-backed staged requirement analysis -> gap analysis -> independent gap verification -> TDD ->
+  test design.
+runner_skill: run-engineering-workflow
+state_path: '{{artifact_root}}/workflow_state.yaml'
+inputs:
+  required:
+  - requirement_path
+  - scope
+  - scope_slug
+  - run_id
+  defaults:
+    artifact_root: docs/reverse-engineering/runs/{{run_id}}
+    stop_after_step: null
+steps:
+  current_state_analysis:
+    prompt: .ai-engineering/prompts/requirement-to-design/01-current-state-analysis.md
+    skills:
+    - resume-reverse-engineering
+    - runtime-flow-analysis
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/analysis/{{scope_slug}}_current_state.md'
+    statuses:
+      CURRENT_STATE_ANALYSIS_COMPLETE: requirement_gap_analysis
+      CURRENT_STATE_ANALYSIS_PARTIAL: resolve_current_state_unknowns
+      CURRENT_STATE_ANALYSIS_BLOCKED: resolve_current_state_unknowns
+  resolve_current_state_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: current_state_analysis
+    on_success: current_state_analysis
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  requirement_gap_analysis:
+    prompt: .ai-engineering/prompts/requirement-to-design/02-requirement-gap-analysis.md
+    skills:
+    - requirement-compliance-review
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/analysis/{{scope_slug}}_requirement_gap.md'
+    statuses:
+      DESIGN_READY: requirement_gap_verification
+      DESIGN_READY_WITH_EXTERNAL_BLOCKERS: requirement_gap_verification
+      DESIGN_NOT_READY_SOURCE_GAPS: resolve_gap_unknowns
+  requirement_gap_verification:
+    prompt: .ai-engineering/prompts/requirement-to-design/02b-requirement-gap-verification.md
+    skills:
+    - requirement-compliance-review
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/analysis/{{scope_slug}}_requirement_gap_verification.md'
+    statuses:
+      GAP_VERIFIED: technical_design
+      GAP_CONTRADICTED: revise_requirement_gap
+      GAP_BLOCKED_SOURCE_GAPS: resolve_gap_unknowns
+  revise_requirement_gap:
+    action: Return independent requirement-gap verification findings to requirement_gap_analysis. Correct only evidence-backed
+      identity, fidelity, aggregate, or transition-consistency defects, then re-run requirement_gap_verification.
+    on_complete: requirement_gap_verification
+  resolve_gap_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: requirement_gap_analysis
+    on_success: requirement_gap_analysis
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  technical_design:
+    prompt: .ai-engineering/prompts/requirement-to-design/03-technical-design.md
+    skills:
+    - technical-design-proposal
+    output: '{{artifact_root}}/proposals/{{scope_slug}}_tdd.md'
+    statuses:
+      TDD_READY: technical_design_verification
+      TDD_READY_WITH_EXTERNAL_BLOCKERS: technical_design_verification
+      TDD_NOT_READY_SOURCE_GAPS: resolve_design_unknowns
+      TDD_INCOMPLETE_ARCHITECTURE: revise_technical_design
+  resolve_design_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: technical_design
+    on_success: technical_design
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  technical_design_verification:
+    prompt: .ai-engineering/prompts/requirement-to-design/04-technical-design-verification.md
+    skills:
+    - technical-design-verification
+    output: '{{artifact_root}}/verification/{{scope_slug}}_tdd_verification.md'
+    statuses:
+      TDD_VERIFIED: contract_test_design
+      TDD_PARTIALLY_VERIFIED: revise_technical_design
+      TDD_CONTRADICTED: revise_technical_design
+      TDD_BLOCKED_SOURCE_GAPS: resolve_design_unknowns
+      TDD_INCOMPLETE_ARCHITECTURE: revise_technical_design
+      TDD_INCOMPLETE_PROPOSED_UNIT_OWNERSHIP: revise_technical_design
+  revise_technical_design:
+    action: Return independent verification findings to technical_design. Revise the TDD only for evidence-backed
+      findings, then re-run technical_design_verification.
+    on_complete: technical_design_verification
+  contract_test_design:
+    prompt: .ai-engineering/prompts/requirement-to-design/05-contract-test-design.md
+    skills:
+    - contract-impact-test-design
+    - regression-test-design
+    output: '{{artifact_root}}/test-design/{{scope_slug}}_test_design.md'
+    statuses:
+      TEST_DESIGN_COMPLETE: DONE
+      TEST_DESIGN_BLOCKED: BLOCKED
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

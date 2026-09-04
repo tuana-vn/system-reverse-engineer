@@ -1,7 +1,6 @@
 ---
 name: architecture-drift-detection
 description: Compare current source code against the stored evidence-backed reverse-engineering baseline to identify stale architectural knowledge, undocumented routing changes, new integrations, removed behavior, or prior baseline errors.
-license: MIT
 ---
 
 # Architecture Drift Detection

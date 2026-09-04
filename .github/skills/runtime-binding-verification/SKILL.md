@@ -1,7 +1,6 @@
 ---
 name: runtime-binding-verification
 description: Prove how an abstraction, interface, mode, or configured choice becomes the concrete runtime implementation actually used, including DI/bootstrap/factory/provider/registry and alternate branches.
-license: MIT
 ---
 
 # Runtime Binding Verification

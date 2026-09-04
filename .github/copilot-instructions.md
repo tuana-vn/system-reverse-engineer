@@ -1,10 +1,36 @@
-# Copilot Instructions — Evidence-Backed Reverse Engineering (V3.0)
+## Normative Methodology Baseline
+
+Before materially changing methodology, workflow semantics, design gates, or agent boundary, read `docs/METHODOLOGY_BASELINE.md`. It is normative and overrides historical examples. Normal bug-fix releases must preserve the agent purpose and `IMPLEMENTATION_READY` stop boundary.
+
+# Copilot Instructions — Repository-Specific Rules (4.0)
 
 ## Purpose
 
 This repository is analyzed and evolved using source-first, evidence-backed reverse engineering.
 
-Repository vocabulary, protocol names, subsystem labels, and legacy terminology are search hints only. Do not infer architecture from names. Prove architecture, protocol, runtime selection, configuration, and business behavior from source.
+Repository vocabulary may include framework names, business-domain terms, protocol labels, service names, deployment modes, or legacy abbreviations. Treat names as search hints only. Prove architecture, protocol, runtime selection, configuration, and business behavior from source.
+
+
+## Workflow / Prompt / Skill Separation
+
+For high-impact work, distinguish:
+
+```text
+workflow = stage order + gates
+prompt   = exact task/scope/output for the current stage
+skill    = reusable methodology
+source   = evidence
+artifact = persistent result
+```
+
+If a workflow exists, do not collapse multiple stages into one answer.
+
+Use `/run-engineering-workflow` and require the stage artifact's `WORKFLOW_GATE`.
+A missing gate is not a pass.
+
+Do not assume a generic skill knows the feature-specific requirement scope.
+Read the referenced task prompt.
+
 
 ## Reverse-Engineering Workspace
 
@@ -102,11 +128,22 @@ Unless explicitly asked to implement:
 - do not change runtime configuration
 - do not change external behavior
 
-## Integration Caution
+## Integration Analysis Caution
 
-For every external integration or protocol boundary, prove the concrete client/adapter, configuration source, runtime binding, invocation mechanism, request construction, response parsing, retry/fallback, and error mapping.
+### REST / HTTP clients
+Prove the concrete client, URL/config source, endpoint, method, authentication, request/response mapping, retry policy, runtime binding, and error translation.
 
-Do not assume labels, mode names, enums, or configuration values directly determine the downstream implementation. Trace configuration source → runtime binding → selected implementation.
+### Message consumers / producers
+For Kafka, AMQP, queue, or event-driven flows, prove topic/queue configuration, producer/consumer binding, serialization, acknowledgment semantics, retry/dead-letter behavior, and the actual runtime call path.
+
+### Native C/C++ boundaries
+For executables, shared libraries, FFI/JNI/PInvoke, sockets, or subprocess calls, prove symbol/process selection, configuration, ownership, lifecycle, error propagation, and the concrete runtime binding.
+
+### Python workers / jobs
+For FastAPI/Flask/Django services, Celery/RQ workers, scheduled jobs, or CLI entry points, trace configuration source → startup/registration → selected implementation → downstream integration.
+
+### Domain labels
+Do not assume a business label such as `order`, `inventory`, `promotion`, or `payment` identifies the owning component. Trace entry point → runtime binding → implementation → persistence/integration.
 
 ## Persistence
 
@@ -140,3 +177,87 @@ Console output should normally contain only:
 - HIGH/CRITICAL blockers
 - artifact paths
 - exact next action
+
+
+## 4.0 Detailed Design / WBS Rules
+
+For requirement-driven implementation planning:
+
+```text
+verified TDD
+→ artifact registry
+→ one detailed design per artifact
+→ independent DD verification
+→ WBS
+→ independent WBS verification
+→ readiness certification
+```
+
+Never generate WBS from TDD alone when the workflow requires artifact-level detailed design.
+
+Every WBS task must trace back to approved design.
+Every verified design artifact must have WBS coverage.
+Actively search for missing work; do not only review existing WBS rows.
+
+Do not estimate effort unless the user explicitly invokes a separate estimation method.
+
+
+## 4.0 Use-Case Routing
+
+Prefer:
+
+```text
+user goal
+→ `docs/USE_CASE_CATALOG.md`
+→ workflow
+→ stage prompt
+→ skills
+```
+
+Do not ask the user to select from many skills when a documented workflow covers the task.
+Use the smallest workflow sufficient for the goal.
+
+
+## 4.0 Physical Layout
+
+Use:
+- `.github/` for Copilot-specific agent/skill/instruction assets
+- `.ai-engineering/` for workflows/prompts/schemas/state templates
+- `docs/reverse-engineering/` for generated project artifacts
+
+All workflow/prompt references must use the 4.0 `.ai-engineering/...` paths.
+
+
+## 4.0 Technical Design Architecture Gate
+
+For requirement-driven technical design, never treat a prose-only design as reviewer-grade.
+
+Require:
+- `CURRENT Static Architecture`
+- `PROPOSED Static Architecture`
+- `Component Responsibilities`
+- runtime sequence/flow for materially changed behavior
+
+A static architecture section is mandatory even when the resulting structure is unchanged;
+in that case explicitly state and justify the unchanged structure.
+
+Do not advance from TDD generation to test design without independent
+`technical-design-verification`.
+
+
+## 4.0 Post-Readiness Audit
+
+After `IMPLEMENTATION_READY`, follow the workflow into the independent post-readiness audit.
+
+Do not manually ask the user for WBS IDs when workflow state can resolve the WBS and related
+artifacts.
+
+A whole-package audited PASS is the preferred implementation handoff condition.
+
+
+## Package maintenance rule
+Before changing/releasing the agent package, re-read `docs/PACKAGE_MAINTENANCE_RULES.md` and `docs/METHODOLOGY_BASELINE.md` from the exact predecessor package.
+
+## Runtime methodology immutability (4.0)
+
+During normal repository analysis/reverse-engineering execution, treat `.ai-engineering/` and `.github/` as read-only methodology infrastructure. Do not create temporary/helper prompts, workflows, skills, or agents there. Write runtime outputs only to workflow-declared artifact/state paths. If a required methodology asset is missing, stop and report it instead of synthesizing one. This restriction does not apply when the user explicitly asks to maintain or modify the methodology package itself.

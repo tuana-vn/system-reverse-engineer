@@ -1,0 +1,30 @@
+version: '4.0'
+name: claim-justification
+description: Prove or narrow a high-impact semantic/architecture claim from current source.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/workflows/{{run_id}}.yaml
+inputs:
+  required:
+  - claim
+  - scope
+  - scope_slug
+  optional:
+  - requirement_path
+  defaults:
+    artifact_root: docs/reverse-engineering
+steps:
+  justify_claim:
+    prompt: .ai-engineering/prompts/claim-justification/01-justify-claim.md
+    skills:
+    - resume-reverse-engineering
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/reviews/{{scope_slug}}_claim_justification.md'
+    statuses:
+      CLAIM_PROVEN: DONE
+      CLAIM_PARTIALLY_PROVEN: DONE
+      CLAIM_NOT_PROVEN: DONE
+      CLAIM_CONTRADICTED: DONE
+      CLAIM_SOURCE_NOT_RESOLVED: BLOCKED
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

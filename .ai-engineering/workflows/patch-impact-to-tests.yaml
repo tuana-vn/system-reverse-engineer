@@ -1,0 +1,67 @@
+version: '4.0'
+name: patch-impact-to-tests
+description: Review patch impact, optionally check requirement compliance, then derive regression/contract tests.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/workflows/{{run_id}}.yaml
+inputs:
+  required:
+  - patch_path
+  - scope
+  - scope_slug
+  optional:
+  - requirement_path
+  defaults:
+    artifact_root: docs/reverse-engineering
+steps:
+  patch_impact_review:
+    prompt: .ai-engineering/prompts/patch-impact-to-tests/01-patch-impact-review.md
+    skills:
+    - resume-reverse-engineering
+    - patch-impact-review
+    output: '{{artifact_root}}/reviews/{{scope_slug}}_patch_impact.md'
+    statuses:
+      PATCH_REVIEW_COMPLETE:
+        if_input_present:
+          requirement_path: requirement_compliance
+        else: regression_test_design
+      PATCH_REVIEW_BLOCKED: resolve_patch_unknowns
+  resolve_patch_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: patch_impact_review
+    on_success: patch_impact_review
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  requirement_compliance:
+    prompt: .ai-engineering/prompts/patch-impact-to-tests/02-requirement-compliance.md
+    skills:
+    - requirement-compliance-review
+    output: '{{artifact_root}}/reviews/{{scope_slug}}_patch_compliance.md'
+    statuses:
+      COMPLIANCE_REVIEW_COMPLETE: regression_test_design
+      COMPLIANCE_REVIEW_BLOCKED: resolve_compliance_unknowns
+  resolve_compliance_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: requirement_compliance
+    on_success: requirement_compliance
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+  regression_test_design:
+    prompt: .ai-engineering/prompts/patch-impact-to-tests/03-regression-test-design.md
+    skills:
+    - regression-test-design
+    - contract-impact-test-design
+    output: '{{artifact_root}}/test-design/{{scope_slug}}_patch_regression.md'
+    statuses:
+      TEST_DESIGN_COMPLETE: DONE
+      TEST_DESIGN_BLOCKED: BLOCKED
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false

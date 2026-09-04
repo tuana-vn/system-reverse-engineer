@@ -1,75 +1,122 @@
 ---
 name: technical-design-proposal
-description: Produce a reviewer-grade technical detailed design for a new feature or change using the evidence-backed current architecture as the design baseline. Use before implementation.
+description: Produce a reviewer-grade, source-backed technical design with mandatory static architecture, runtime architecture, component responsibilities, traceability, provenance, compatibility, and exact change points. Use only after current-state and verified-gap analysis.
 license: MIT
 ---
 
-# Technical Detailed Design Proposal
+# Technical Design Proposal — 4.0
 
-## Principle
+## Purpose
 
-First reconstruct the relevant current behavior, then propose change.
+A Technical Design must explain BOTH:
+
+```text
+WHAT the proposed system structure is
+AND
+HOW the proposed runtime behavior works
+```
+
+A TDD that contains only prose, gap tables, or sequence flows is incomplete when the change
+affects software structure or responsibilities.
+
+Use:
+
+```text
+Requirement
+→ Current Source / Runtime Evidence
+→ Verified Gap
+→ Proposed Static Architecture
+→ Proposed Dynamic Architecture
+→ Detailed Responsibilities / Contracts
+→ Change Set
+→ Verification
+```
+
+## Source-of-Truth Rules
 
 Clearly separate:
 
 - CURRENT VERIFIED BEHAVIOR
-- REQUIREMENT
+- REQUIREMENT / INTENDED BEHAVIOR
+- VERIFIED GAP
 - PROPOSED DESIGN
 - ASSUMPTION
-- OPEN QUESTION
+- OPEN QUESTION / SOURCE_NOT_RESOLVED
 
-Do not present proposed classes as existing classes.
+Current repository source is authoritative for CURRENT structure and behavior.
+Requirement is authoritative for intended behavior.
+A proposed class/interface/component is never a current-source fact.
 
-## Required Design Depth
+When used after compliance/impact analysis:
 
-Include when relevant:
+- design only VERIFIED gaps
+- do not redesign behavior already proven compliant
+- do not convert secondary concerns into requirement gaps
+- if a design decision depends on unresolved source evidence, use `TDD_NOT_READY_SOURCE_GAPS`
 
-1. purpose/scope/non-goals
-2. current affected architecture
-3. normalized requirements
-4. proposed architecture
-5. alternatives and tradeoffs
-6. component responsibilities
-7. class/interface design
-8. method/pseudo-signatures in repository language
-9. existing integration points
-10. data model/schema
-11. configuration
-12. runtime sequences
-13. error/retry/fallback
-14. lifecycle/concurrency
-15. security/sensitive data
-16. observability
-17. compatibility
-18. testing
-19. implementation phases
-20. exact file/class change proposal
-21. risks/open questions
-22. evidence index
+---
 
-## Architecture and Class Diagrams
+# 1. Canonical Requirement / Scope Matrix
 
-Diagrams are part of the technical design, not optional decoration.
+When behavior is operation/surface-specific, include:
 
-### Mandatory diagram rule
+| Rule ID | Surface / Operation | Applies? | Condition | Required Observable Behavior | Explicit Exclusion |
+|---|---|---:|---|---|---|
 
-If the proposed design introduces or materially modifies any of the following:
+Rules:
 
-- classes
-- interfaces
-- services
-- factories/providers/selectors
-- adapters/wrappers
-- controllers/handlers
-- repositories
-- major dependencies between components
+- evaluate each row independently
+- no condition leakage between endpoints/operations
+- preserve MUST-NOT/non-goals
+- do not widen requirement scope
 
-the TDD MUST include BOTH:
+---
 
-1. **CURRENT architecture/class/component diagram**
-2. **PROPOSED architecture/class/component diagram**
+# 2. CURRENT Static Architecture — Mandatory When Relevant
 
-Use Mermaid when practical.
+Use the exact heading:
+
+```text
+## CURRENT Static Architecture
+```
+
+Include a Mermaid `classDiagram` or component diagram showing only source-verified existing
+classes/interfaces/components that are relevant to the change.
+
+Show where materially relevant:
+
+- controllers/resources/handlers
+- services/use cases
+- interfaces and implementations
+- integration adapters/clients
+- data/context models
+- repositories/configuration components
+- external boundaries
+
+Rules:
+
+- no proposed type in CURRENT diagram
+- uncertain relationship must be labeled UNKNOWN or omitted
+- use exact current source names
+- diagram must be explainable from source evidence
+
+If the feature is structurally trivial and no meaningful current static view exists, explicitly state
+why `CURRENT Static Architecture` is not applicable. Do not omit the section silently.
+
+---
+
+# 3. PROPOSED Static Architecture — HARD REQUIREMENT
+
+Use the exact heading:
+
+```text
+## PROPOSED Static Architecture
+```
+
+This section is a required TDD artifact.
+
+When the design introduces or materially changes classes/interfaces/components/responsibilities,
+include a Mermaid static diagram.
 
 Prefer:
 
@@ -77,108 +124,315 @@ Prefer:
 classDiagram
 ```
 
-for static type relationships, and use a component-style Mermaid diagram when package/module/system boundaries communicate the design more clearly.
+when class/interface relationships matter.
 
-Sequence diagrams do NOT replace class/component diagrams.
+Use component-style Mermaid when module/package/system boundaries are clearer.
 
-Sequence diagrams explain runtime behavior.
-Class/component diagrams explain static design structure.
-A reviewer-grade TDD normally needs both when the change affects structure and runtime behavior.
+The proposed static architecture must show:
 
-### CURRENT diagram requirements
+- important EXISTING types/components that remain involved
+- every major NEW type/component
+- every materially MODIFIED existing type/component
+- interfaces and implementations
+- important dependency/composition relationships
+- important callers/consumers
+- external boundaries where relevant
+- the same names used by the written design
 
-The CURRENT diagram must:
+Mark proposed artifacts clearly, for example with `<<PROPOSED>>` or explicit labels.
 
-- contain only source-verified existing types/components
-- show the relevant current ownership/boundaries
-- show important dependencies/call relationships
-- identify external systems/boundaries where relevant
-- avoid proposed types
-- label uncertain relationships instead of inventing them
+Do NOT invent extra classes just to make the picture symmetrical.
 
-### PROPOSED diagram requirements
+### Non-structural changes
 
-The PROPOSED diagram must:
+Even when no new class/interface is required, keep the `PROPOSED Static Architecture` section.
+Show the resulting static structure or explain, with evidence, why the static structure is unchanged
+and identify which existing responsibilities are modified.
 
-- clearly distinguish EXISTING and NEW/MODIFIED types
-- show interfaces and implementations
-- show inheritance/implementation relationships
-- show composition/dependency relationships
-- show primary callers/consumers
-- show important external boundaries
-- reflect the recommended design, not every rejected alternative
-- use the same names as the class/interface design and file-change sections
+### Hard completeness rule
 
-Do not invent extra classes merely to make the diagram visually neat.
+If the design changes structural responsibilities and `PROPOSED Static Architecture` is missing:
 
-### Diagram-to-design consistency
+```text
+TDD = INCOMPLETE
+```
 
-Every major NEW or materially MODIFIED type listed in:
+Do not issue `TDD_READY`.
 
-- Proposed Components
-- Class/Interface Design
-- Exact File/Class Change Proposal
+---
 
-must appear in the PROPOSED class/component diagram.
+# 4. Component Responsibilities — Mandatory
 
-Every major relationship shown in the diagram must be explainable by the written design.
+Use the exact heading:
 
-If the diagram and prose disagree, the TDD is incomplete and must be corrected before completion.
+```text
+## Component Responsibilities
+```
 
-## Runtime Diagrams
+Create:
 
-When the feature changes runtime behavior, include sequence/flow diagrams for the important scenarios.
+| Component / Type | Existing / Proposed | Responsibility | Inputs | Outputs / Result | Dependencies | Requirement / Gap |
+|---|---|---|---|---|---|---|
 
-At minimum cover:
+Every major type shown in the proposed static diagram must appear here.
 
-- primary success flow
-- primary failure/error flow
-- important negative/exclusion flow when the requirement contains MUST-NOT/skip behavior
-- retry/fallback flow when applicable
+---
 
-Do not use sequence diagrams as a substitute for static architecture/class diagrams.
+# 5. Class / Interface / Contract Design
 
-## Integration Table
+When applicable, define:
 
-| Existing Class/Method | Current Role | Proposed Change | Reason | Risk |
-|---|---|---|---|---|
+- proposed/existing class or interface
+- purpose
+- methods / pseudo-signatures in repository language
+- caller(s)
+- lifecycle/ownership
+- inputs/outputs
+- error/result contract
+- concurrency/threading only if relevant
+- sensitive-data constraints where relevant
 
-## Proposed Components
+Do not fabricate exact signatures if the design evidence only supports conceptual parameters.
+Mark conceptual signatures as `PROPOSED PSEUDO-SIGNATURE`.
 
-| Component | Existing/New | Responsibility | Dependencies |
-|---|---|---|---|
+---
 
-## Diagram Quality Gate
+# 6. PROPOSED Dynamic Architecture / Runtime Sequences
 
-Before completing the TDD, perform this check:
+Use the exact heading:
 
-1. Does the proposal introduce or materially modify classes/interfaces/components?
-   - If YES, CURRENT and PROPOSED static diagrams are mandatory.
+```text
+## PROPOSED Dynamic Architecture / Runtime Sequences
+```
 
-2. Does every major proposed type appear in the PROPOSED diagram?
-   - If NO, update the diagram or remove/correct the unsupported type.
+When runtime behavior changes, include Mermaid sequence/flow diagrams.
 
-3. Does every major modified existing type appear where its relationship matters?
-   - If NO, update the diagram.
+At minimum cover where applicable:
 
-4. Are existing vs proposed elements visually/textually distinguishable?
-   - If NO, fix the diagram.
+- primary success
+- primary functional rejection/failure
+- technical error/failure
+- important MUST-NOT / excluded flow
+- retry/fallback flow
 
-5. Are external boundaries represented correctly?
-   - If NO, fix the diagram.
+Sequence diagrams do NOT replace static architecture.
 
-6. Are sequence diagrams present for behaviorally significant flows?
-   - If NO, add them.
+---
 
-7. Do class/component diagrams, sequence diagrams, component responsibilities,
-   pseudo-signatures, and exact file/class changes describe the SAME design?
-   - If NO, reconcile the contradiction before completion.
+# 7. Current → Proposed Flow Comparison
 
-A TDD that proposes major structural code changes but has no static
-class/component diagram is INCOMPLETE.
+For materially changed flows:
+
+```text
+CURRENT:
+entry
+→ current decision/integration
+→ current observable result
+
+PROPOSED:
+same entry
+→ minimal new/changed decision point
+→ proposed integration/behavior
+→ preserved or changed observable result
+```
+
+This prevents architecture diagrams from becoming disconnected pictures.
+
+---
+
+# 8. Field / Data / Context Provenance
+
+For every verified gap involving externally meaningful data:
+
+```text
+trigger
+→ source/retrieval
+→ parse/decode
+→ transform/normalize
+→ mapping/state
+→ serialization/emission
+→ observable result
+```
+
+For proposed behavior:
+
+```text
+CURRENT provenance
+→ proven break point
+→ proposed change
+→ resulting provenance
+```
+
+Do not add output-layer conditions when earlier retrieval/mapping already enforces the behavior.
+
+---
+
+# 9. Boundary → Exposure Coverage
+
+When a changed design touches an integration/downstream boundary:
+
+```text
+boundary
+← ALL direct invocation/construction sites
+← ALL material caller chains
+← ALL external entry points / proven internal roots
+```
+
+The design must account for all materially impacted external operations.
+Do not design for one representative endpoint only.
+
+---
+
+# 10. Candidate Design Evaluation
+
+When there are materially different viable placements/approaches:
+
+| Candidate | Requirement Coverage | Exclusion Safety | Evidence Support | Coupling | Duplicate Risk | Compatibility | Change Size | Decision |
+|---|---|---|---|---|---|---|---|---|
+
+Choose based on source-backed fit, not architectural fashion.
+
+---
+
+# 11. Gap → Solution Matrix
+
+| Gap ID | Surface | Current Observable Behavior | Required Behavior | Proven Break Point | Minimal Proposed Change | Evidence |
+|---|---|---|---|---|---|---|
+
+Every proposed change must map to a verified gap or explicit requirement-enabling design need.
+
+---
+
+# 12. Integration / Existing Change Point Table
+
+| Existing File / Class / Method | Current Role | Proposed Change | Why This Point | Risk | Evidence |
+|---|---|---|---|---|---|
+
+Use exact source anchors where possible.
+
+---
+
+# 13. Data Model / Configuration / Persistence
+
+Include only when affected.
+
+For data model:
+- field/type
+- provenance
+- nullability/default
+- serialization/persistence
+- compatibility
+
+For configuration:
+- source/default/override precedence
+- consumer
+- invalid/missing behavior
+- lifecycle/reload
+
+For persistence:
+- schema/key
+- read/write path
+- consistency/transaction behavior
+- migration/backward compatibility
+
+---
+
+# 14. Error / Failure / Isolation Design
+
+Define:
+
+- functional rejection
+- technical failure
+- mapping to existing observable behavior
+- retry/fallback if applicable
+- failure-isolation rules
+- whether new supporting logic may mask original behavior
+
+---
+
+# 15. Compatibility / Non-Goal Preservation
+
+Explicitly cover:
+
+- unaffected operations
+- MUST-NOT behavior
+- protocol/API compatibility
+- existing success/error behavior
+- performance-sensitive call-count/data-volume changes
+- sensitive-data handling
+- internal/background behavior where relevant
+
+---
+
+# 16. Exact Proposed Change Set
+
+| Change ID | Artifact | Existing / Proposed | File / Proposed Location | Change | Requirement IDs | Gap IDs | Verification |
+|---|---|---|---|---|---|---|---|
+
+No change item without traceability.
+
+---
+
+# 17. Design Traceability
+
+| Requirement | Verified Gap | TDD Decision | Static Architecture Component | Runtime Flow | Change ID | Test / Verification |
+|---|---|---|---|---|---|---|
+
+This is the bridge from requirement to implementation planning.
+
+---
+
+# 18. Diagram Consistency Gate
+
+Before completion, verify:
+
+```text
+[ ] CURRENT Static Architecture section exists
+[ ] PROPOSED Static Architecture section exists
+[ ] proposed diagram includes every major new/modified component
+[ ] Component Responsibilities covers every major proposed diagram component
+[ ] class/interface design uses the same names as the diagram
+[ ] runtime diagrams use the same components/responsibilities
+[ ] exact change set uses the same names/locations
+[ ] external boundaries are represented correctly
+[ ] CURRENT diagram contains no proposed artifacts
+[ ] proposed-vs-existing distinction is explicit
+```
+
+Any applicable failure means the TDD is not ready.
+
+---
+
+# 19. TDD Completion Gate
+
+Before `TDD_READY`:
+
+```text
+[ ] requirement/scope rows are isolated
+[ ] verified gaps are separate from assumptions
+[ ] current behavior is source-backed
+[ ] CURRENT Static Architecture present or explicitly justified N/A
+[ ] PROPOSED Static Architecture present or explicitly justified unchanged
+[ ] Component Responsibilities present
+[ ] dynamic/runtime diagrams cover materially changed flows
+[ ] changed field/data provenance is proven where applicable
+[ ] boundary/exposure coverage is complete where applicable
+[ ] proposed change targets proven break points
+[ ] compatibility/non-goals are preserved
+[ ] exact change set is traceable
+[ ] tests/verification map to observable behavior
+[ ] no unresolved HIGH/CRITICAL source-resolvable design gap remains
+```
+
+Statuses:
+
+- `TDD_READY`
+- `TDD_READY_WITH_EXTERNAL_BLOCKERS`
+- `TDD_NOT_READY_SOURCE_GAPS`
+- `TDD_INCOMPLETE_ARCHITECTURE`
 
 ## Output
 
 `docs/reverse-engineering/proposals/<feature>-tdd.md`
 
-Do not update baseline memory.
+Do not update canonical current-system baseline.

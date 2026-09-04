@@ -1,0 +1,11 @@
+workflow: null
+run_id: null
+status: NOT_STARTED
+inputs: {}
+active_step: null
+completed_steps: []
+failed_or_blocked_steps: []
+last_gate: null
+unresolved_qids: []
+artifacts: {}
+resume_instruction: null

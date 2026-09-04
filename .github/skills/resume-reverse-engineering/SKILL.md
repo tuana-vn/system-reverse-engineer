@@ -1,10 +1,9 @@
 ---
 name: resume-reverse-engineering
-description: Rehydrate a fresh Copilot session from the existing V3.0 repository-backed reverse-engineering baseline and workflow state without restarting reverse engineering from scratch.
-license: MIT
+description: Rehydrate a fresh Copilot session from the existing 4.0 repository-backed reverse-engineering baseline and workflow state without restarting reverse engineering from scratch.
 ---
 
-# Resume Reverse Engineering — V3.0
+# Resume Reverse Engineering — 4.0
 
 ## Purpose
 
@@ -14,7 +13,7 @@ The previous Copilot session is NOT a source of truth.
 
 The repository is the persistent memory.
 
-This skill restores working context from the existing V3.0 artifacts so that subsequent skills can continue from the current verified baseline.
+This skill restores working context from the existing 4.0 artifacts so that subsequent skills can continue from the current verified baseline.
 
 ## Core Rule
 
@@ -29,7 +28,7 @@ LOAD WORKFLOW STATE
     ↓
 LOAD ONLY RELEVANT SUPPORTING ARTIFACTS
     ↓
-CONTINUE WITH NEXT V3.0 SKILL
+CONTINUE WITH NEXT 4.0 SKILL
 ```
 
 Do NOT restart `/full-reverse-engineering` merely because the session is new.
@@ -38,7 +37,7 @@ Do NOT rely on conversational memory from another Copilot session.
 
 Do NOT treat hypotheses, proposals, drafts, or rejected findings as promoted architecture facts.
 
-## Step 1 — Load V3.0 Operating Instructions
+## Step 1 — Load 4.0 Operating Instructions
 
 Read, when present:
 
@@ -48,7 +47,7 @@ Read, when present:
 
 Read the active `system-reverse-engineer` agent instructions.
 
-Read this skill and any V3.0 skill explicitly referenced by the current workflow state.
+Read this skill and any 4.0 skill explicitly referenced by the current workflow state.
 
 Do not load every skill into working context unless necessary.
 
@@ -62,7 +61,7 @@ docs/reverse-engineering/
 
 Prefer the repository's existing paths and filenames.
 
-Do not invent replacement files if equivalent V3.0 files already exist.
+Do not invent replacement files if equivalent 4.0 files already exist.
 
 Identify the current canonical artifacts, especially:
 
@@ -72,7 +71,7 @@ Identify the current canonical artifacts, especially:
 00_evidence_ledger.md
 00_hypotheses.md
 00_open_questions.md
-00_workflow_state.md
+workflow_state.yaml
 00_investigation_coverage.md
 ```
 
@@ -87,7 +86,7 @@ Also locate, when present:
 08_final_reverse_engineered_baseline.md
 ```
 
-If filenames differ slightly in the repository, use the actual V3.0 files rather than creating duplicates.
+If filenames differ slightly in the repository, use the actual 4.0 files rather than creating duplicates.
 
 ## Step 3 — Establish Baseline Identity
 
@@ -95,7 +94,7 @@ Determine the source identity associated with the existing baseline.
 
 Prefer, in order:
 
-1. baseline commit recorded in V3.0 artifacts
+1. baseline commit recorded in 4.0 artifacts
 2. repository commit recorded in workflow state
 3. current Git HEAD if no baseline identity is recorded
 
@@ -182,7 +181,7 @@ Do not assume an old open question is still unresolved if current source or late
 From:
 
 ```text
-00_workflow_state.md
+workflow_state.yaml
 00_investigation_coverage.md
 ```
 
@@ -260,7 +259,7 @@ BASELINE_STALE_FOR_CURRENT_TASK
 
 Do NOT automatically run `/baseline-source-of-truth-maintenance`.
 
-If maintenance is needed, recommend it as the next V3.0 action.
+If maintenance is needed, recommend it as the next 4.0 action.
 
 For a patch or unmerged diff, do NOT treat patch behavior as current canonical truth.
 
@@ -278,7 +277,7 @@ Workflow phase/status
 Baseline freshness
 Baseline readiness
 High-impact unknown closure state
-Likely next V3.0 skill
+Likely next 4.0 skill
 ```
 
 Do not create a new reverse-engineering baseline during resume.
@@ -365,7 +364,7 @@ Ready for:
 
 If the user has already supplied a task in the same prompt, do NOT wait.
 
-After rehydrating context, immediately execute the requested V3.0 skill.
+After rehydrating context, immediately execute the requested 4.0 skill.
 
 Example:
 
@@ -390,5 +389,5 @@ Never:
 - treat unmerged patch code as current baseline
 - silently ignore baseline/current-HEAD mismatch
 
-The repository-backed V3.0 baseline is the persistent memory.
+The repository-backed 4.0 baseline is the persistent memory.
 The Copilot conversation is disposable working context.

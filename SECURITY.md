@@ -1,6 +1,6 @@
 # Security and Confidentiality
 
-This repository contains prompts/instructions only. It does not grant permission to process third-party or proprietary source code with any AI service.
+This repository contains .ai-engineering/prompts/instructions only. It does not grant permission to process third-party or proprietary source code with any AI service.
 
 Before using it on a repository, confirm that your organization, customer, project, and data-handling policies allow the selected GitHub Copilot deployment to access that source.
 

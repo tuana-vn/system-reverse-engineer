@@ -1,10 +1,9 @@
 ---
 name: baseline-source-of-truth-maintenance
 description: Safely maintain canonical reverse-engineering baseline after verified current-source changes. Enforces evidence lifecycle, promotion gates, supersession history, and removal of stale claims.
-license: MIT
 ---
 
-# Baseline Source-of-Truth Maintenance — V2
+# Baseline Source-of-Truth Maintenance — 4.0
 
 ## Preconditions
 

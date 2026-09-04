@@ -1,10 +1,9 @@
 ---
 name: reverse-engineering-bootstrap
-description: Initialize V3.0 repository-backed reverse-engineering memory, workflow state, investigation coverage, baseline identity, and broad candidate reconnaissance without prematurely promoting architecture claims.
-license: MIT
+description: Initialize 4.0 repository-backed reverse-engineering memory, workflow state, investigation coverage, baseline identity, and broad candidate reconnaissance without prematurely promoting architecture claims.
 ---
 
-# Reverse Engineering Bootstrap — V3.0
+# Reverse Engineering Bootstrap — 4.0
 
 ## Goal
 
@@ -20,7 +19,7 @@ Under `docs/reverse-engineering/`:
 00_master_decision_matrix.md
 00_hypotheses.md
 00_open_questions.md
-00_workflow_state.md
+workflow_state.yaml
 00_investigation_coverage.md
 ```
 

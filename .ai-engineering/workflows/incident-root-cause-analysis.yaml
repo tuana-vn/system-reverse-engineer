@@ -1,0 +1,39 @@
+version: '4.0'
+name: incident-root-cause-analysis
+description: Evidence-first incident investigation that separates observed facts, candidate causes, source/runtime
+  mechanisms, disconfirming evidence, and unresolved evidence gaps.
+runner_skill: run-engineering-workflow
+state_path: docs/reverse-engineering/workflows/{{run_id}}.yaml
+inputs:
+  required:
+  - incident_input
+  - scope
+  - scope_slug
+  defaults:
+    artifact_root: docs/reverse-engineering
+steps:
+  incident_analysis:
+    prompt: .ai-engineering/prompts/incident-root-cause-analysis/01-incident-analysis.md
+    skills:
+    - resume-reverse-engineering
+    - incident-root-cause-analysis
+    - runtime-flow-analysis
+    - claim-verification-and-promotion
+    output: '{{artifact_root}}/incidents/{{scope_slug}}_root_cause_analysis.md'
+    statuses:
+      RCA_COMPLETE: DONE
+      RCA_PARTIAL_EVIDENCE: DONE
+      RCA_SOURCE_GAPS: resolve_rca_unknowns
+  resolve_rca_unknowns:
+    prompt: .ai-engineering/prompts/common/resolve-high-impact-unknowns.md
+    skills:
+    - resolve-high-impact-unknowns
+    retry_step: incident_analysis
+    on_success: incident_analysis
+    inputs:
+      blocking_artifact: '{{blocking_artifact}}'
+      blocking_qids: '{{blocking_qids}}'
+      retry_step: '{{blocking_retry_step}}'
+execution:
+  execution_mode: resume
+  ignore_previous_completion: false
