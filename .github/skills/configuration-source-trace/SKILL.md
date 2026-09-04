@@ -115,3 +115,19 @@ docs/reverse-engineering/configuration/<scope>.md
 ```
 
 Update open questions/evidence ledger as appropriate.
+
+
+## Canonical Configuration Model
+
+For full-baseline execution, consolidate behavior-changing settings into:
+
+```text
+docs/reverse-engineering/models/configuration_model.md
+```
+
+Required fields:
+
+| Setting/Selector | Source | Default | Override Precedence | Runtime Holder | Consumer | Behavioral Effect | Variant Selected | Evidence |
+|---|---|---|---|---|---|---|---|---|
+
+Prefer the settings that change architecture, routing, concurrency, integration selection, lifecycle, persistence, security, or externally observable behavior. Do not bury these selectors in an exhaustive property dump.

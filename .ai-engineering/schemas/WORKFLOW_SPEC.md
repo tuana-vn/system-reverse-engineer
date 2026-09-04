@@ -99,6 +99,35 @@ This control is inclusive. The named step must execute, its declared output must
 For fresh runs, `artifact_root` and `state_path` must resolve under `docs/reverse-engineering/runs/<run_id>/` unless an explicitly equivalent run-scoped path is supplied.
 
 
+## Execution delegation contract
+
+Workflow-level execution may declare:
+
+```yaml
+execution:
+  execution_mode: fresh | resume
+  ignore_previous_completion: true | false
+  delegation_mode: direct_only | bounded
+```
+
+`delegation_mode` defaults to `direct_only` when omitted.
+
+Semantics:
+
+```text
+direct_only
+  stage is executed in the current custom-agent session;
+  General-purpose/background sub-agent delegation is forbidden.
+
+bounded
+  a delegated attempt is allowed, but the parent runner remains responsible;
+  one idle/no-progress observation triggers direct fallback;
+  a declared artifact + valid WORKFLOW_GATE is still required.
+```
+
+A workflow must never use agent `running`/`idle`/`completed` status as a stage result.
+Repeated idle polling is forbidden.
+
 ## Resolver input contract
 
 Every step using `.ai-engineering/prompts/common/resolve-high-impact-unknowns.md` must explicitly bind:

@@ -48,3 +48,15 @@ Every canonical claim must:
 - reference Evidence ID
 - match current source scope
 - have promotion status PROMOTED
+
+
+## Consumer Baseline Maintenance
+
+When a verified change affects architecture, runtime flow, integration selection, configuration behavior, state ownership, or lifecycle:
+
+- update the relevant model artifact;
+- update the affected Mermaid diagram when relationships changed;
+- update `CURRENT_STATE_TDD.md`;
+- keep the readiness/adversarial audit separate from the TDD.
+
+Do not leave canonical evidence updated while the consumer-facing architecture model remains stale.

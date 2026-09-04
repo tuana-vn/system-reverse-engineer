@@ -141,9 +141,26 @@ LOW
 NONE
 ```
 
+## Consumer-Model Coverage
+
+Also audit whether the verified evidence has been converted into a usable system model. Check:
+
+```text
+5 mandatory diagram artifacts present
+major subsystem responsibilities modeled
+primary runtime flows modeled
+known external integrations modeled
+behavior-changing configuration selectors modeled
+persistence/state ownership modeled
+diagram nodes/edges evidence-linked
+CURRENT_STATE_TDD references the model artifacts
+```
+
+A baseline with complete evidence tables but missing architecture synthesis is not complete.
+
 ## Gate
 
-Any CRITICAL/HIGH source-resolvable coverage gap means baseline readiness is:
+Any CRITICAL/HIGH source-resolvable coverage gap or mandatory consumer-model gap means baseline readiness is:
 
 ```text
 NOT_READY_HIGH_IMPACT_GAPS

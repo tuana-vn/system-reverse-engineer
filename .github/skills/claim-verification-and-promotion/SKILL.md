@@ -38,6 +38,17 @@ Trace exact current source:
 - config
 as relevant.
 
+Material source-backed claims must record a repo-relative source path. When a specific class/method/function/config key is involved, record the symbol/key as well. Line/range is preferred when practical.
+
+Evidence precision hierarchy:
+
+```text
+path + symbol + line/range   preferred
+path + symbol                strong
+path                         minimum for material source-backed claim
+class name only              insufficient when path is discoverable
+```
+
 ### 3. Counterexample Search
 
 Actively search:
@@ -139,6 +150,8 @@ Before PROMOTE:
 [ ] runtime wiring is proven where relevant
 [ ] field/data provenance is proven for observable-data claims
 [ ] no material evidence link remains unresolved
+[ ] material source evidence includes repo-relative path
+[ ] symbol/config key is recorded where applicable
 ```
 
 If an applicable item is unresolved, use `VERIFIED_NOT_PROMOTED`, `KEEP AS HYPOTHESIS`,

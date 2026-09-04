@@ -48,6 +48,11 @@ for wf_path in sorted(WF_DIR.glob('*.yaml')):
         errors.append(f'{wf_path.name}: YAML parse failed: {exc}'); continue
     if str(wf.get('version'))!='4.0': errors.append(f'{wf_path.name}: workflow version must be 4.0')
     if str(wf.get('state_path','')).lower().endswith('.md'): errors.append(f'{wf_path.name}: state_path must be YAML, not Markdown')
+    delegation_mode=(wf.get('execution') or {}).get('delegation_mode','direct_only')
+    if delegation_mode not in {'direct_only','bounded'}:
+        errors.append(f'{wf_path.name}: invalid execution.delegation_mode {delegation_mode!r}')
+    if wf_path.name=='full-reverse-engineering.yaml' and delegation_mode!='direct_only':
+        errors.append(f'{wf_path.name}: full reverse engineering must use delegation_mode=direct_only')
     raw=wf_path.read_text(encoding='utf-8')
     if re.search(r'agent_package_version\s*:\s*["\']?\d',raw):
         errors.append(f'{wf_path.name}: must not duplicate literal agent_package_version; runner injects package version')
@@ -130,3 +135,4 @@ print('resolver_bindings=validated')
 print('child_workflows=validated')
 print('prompt_variables=validated')
 print('foreach_bindings=validated')
+print('delegation_contract=validated')

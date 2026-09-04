@@ -94,3 +94,23 @@ implementation-results/attempt-02/
 ```
 
 and keep the filenames inside each attempt directory unchanged.
+
+
+## Canonical Full-Baseline Consumer Artifacts
+
+The following names are stable for UC-01:
+
+```text
+CURRENT_STATE_TDD.md
+diagrams/01_system_context.md
+diagrams/02_component_architecture.md
+diagrams/03_primary_runtime_sequence.md
+diagrams/04_integration_boundaries.md
+diagrams/05_state_persistence_lifecycle.md
+models/component_catalog.md
+models/runtime_flow_catalog.md
+models/integration_catalog.md
+models/configuration_model.md
+models/persistence_state_model.md
+reviews/12_readiness_audit.md
+```

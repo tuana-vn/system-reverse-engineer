@@ -66,30 +66,35 @@ Do not rebuild the whole baseline automatically unless UC-01 is actually needed.
 
 ## 3. Workflow Invocation Pattern
 
-Use this shape:
+Use the deterministic one-line skill invocation shape:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/<workflow>.yaml
-
-Inputs:
-key=value
-key=value
+/run-engineering-workflow .ai-engineering/workflows/<workflow>.yaml key=value key=value
 ```
+
+For full multi-stage workflows, start Copilot CLI in Autopilot mode first:
+
+```bash
+copilot --mode autopilot --max-autopilot-continues 20
+```
+
+Then select `system-reverse-engineer` with `/agent`.
 
 Do not copy/paste the full prompt file when the prompt already exists in the repository.
 
-The runner must:
+
+The workflow semantics are:
+
 1. load workflow
-2. execute one substantive stage
-3. write artifact
-4. read structured `WORKFLOW_GATE`
-5. persist state
-6. transition/retry/stop
+2. execute one substantive stage as one bounded reasoning continuation
+3. write the declared artifact
+4. read and validate the structured `WORKFLOW_GATE`
+5. persist the workflow transition
+6. if the next state is non-terminal, immediately continue the next stage in the same Autopilot task
+7. stop only at `DONE`, `BLOCKED`, a genuine input-required condition, an explicit `stop_after_step`, or the CLI continuation ceiling
 
 A missing gate is not success.
+An intermediate stage completion is not task completion.
 
 ---
 
@@ -113,10 +118,7 @@ A missing gate is not success.
 ## 5. UC-01 — Full Reverse Engineering Baseline
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/full-reverse-engineering.yaml
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=YYYYMMDD
 ```
 
 Use when:
@@ -124,17 +126,32 @@ Use when:
 - baseline is absent/untrusted
 - broad architecture understanding is required
 
-Expected canonical workspace:
+Expected consumer-facing baseline:
 
 ```text
 docs/reverse-engineering/
-  00_current_understanding.md
-  00_evidence_ledger.md
-  00_master_decision_matrix.md
-  00_hypotheses.md
-  00_open_questions.md
-  workflow_state.yaml
-  00_investigation_coverage.md
+  CURRENT_STATE_TDD.md
+  diagrams/
+    01_system_context.md
+    02_component_architecture.md
+    03_primary_runtime_sequence.md
+    04_integration_boundaries.md
+    05_state_persistence_lifecycle.md
+  models/
+    component_catalog.md
+    runtime_flow_catalog.md
+    integration_catalog.md
+    configuration_model.md
+    persistence_state_model.md
+  reviews/12_readiness_audit.md
+```
+
+Evidence/workflow memory (`00_*`, `workflow_state.yaml`) remains available as supporting engineering memory.
+
+Before accepting `BASELINE_READY`, run:
+
+```bash
+python .ai-engineering/tools/validate-reverse-engineering-quality.py --artifact-root docs/reverse-engineering
 ```
 
 Do not call `BASELINE_READY` with unresolved source-resolvable HIGH/CRITICAL gaps.
@@ -146,16 +163,7 @@ Do not call `BASELINE_READY` with unresolved source-resolvable HIGH/CRITICAL gap
 Example:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/targeted-source-analysis.yaml
-
-Inputs:
-scope=Order discount response behavior
-scope_slug=order_discount_response
-analysis_question=Trace exactly where the discount amount is calculated and under what endpoint/request conditions it appears.
-analysis_mode=runtime
+/run-engineering-workflow .ai-engineering/workflows/targeted-source-analysis.yaml scope=Order discount response behavior scope_slug=order_discount_response analysis_question=Trace exactly where the discount amount is calculated and under what endpoint/request conditions it appears. analysis_mode=runtime
 ```
 
 For specialized questions, the prompt may invoke:
@@ -173,30 +181,13 @@ Use this instead of full RE for one narrow question.
 Without requirement:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/patch-impact-to-tests.yaml
-
-Inputs:
-patch_path=patches/change.patch
-scope=Promotion-code normalization change
-scope_slug=promotion_code_normalization
+/run-engineering-workflow .ai-engineering/workflows/patch-impact-to-tests.yaml patch_path=patches/change.patch scope=Promotion-code normalization change scope_slug=promotion_code_normalization
 ```
 
 With requirement:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/patch-impact-to-tests.yaml
-
-Inputs:
-patch_path=patches/change.patch
-requirement_path=requirements/promotion_code_requirement.md
-scope=Promotion-code normalization change
-scope_slug=promotion_code_normalization
+/run-engineering-workflow .ai-engineering/workflows/patch-impact-to-tests.yaml patch_path=patches/change.patch requirement_path=requirements/promotion_code_requirement.md scope=Promotion-code normalization change scope_slug=promotion_code_normalization
 ```
 
 Key gates:
@@ -212,15 +203,7 @@ Key gates:
 ## 8. UC-06 — Requirement → TDD
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/requirement-to-design.yaml
-
-Inputs:
-requirement_path=requirements/cart_validation.md
-scope=Cart validation rule
-scope_slug=feature_x
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-design.yaml requirement_path=requirements/cart_validation.md scope=Cart validation rule scope_slug=feature_x
 ```
 
 Lifecycle:
@@ -243,18 +226,7 @@ Do not jump directly to TDD.
 ## 9. UC-07 — Existing TDD → Detailed Design / WBS
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/design-to-implementation.yaml
-
-Inputs:
-requirement_path=requirements/feature.md
-current_state_artifact=docs/reverse-engineering/analysis/feature_x_current_state.md
-gap_artifact=docs/reverse-engineering/analysis/feature_x_requirement_gap.md
-tdd_path=docs/reverse-engineering/proposals/feature_x_tdd.md
-scope=Feature X
-scope_slug=feature_x
+/run-engineering-workflow .ai-engineering/workflows/design-to-implementation.yaml requirement_path=requirements/feature.md current_state_artifact=docs/reverse-engineering/analysis/feature_x_current_state.md gap_artifact=docs/reverse-engineering/analysis/feature_x_requirement_gap.md tdd_path=docs/reverse-engineering/proposals/feature_x_tdd.md scope=Feature X scope_slug=feature_x
 ```
 
 Lifecycle:
@@ -276,15 +248,7 @@ WBS is not effort estimation.
 ## 10. UC-08 — Requirement → Implementation-Ready Plan
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/requirement-to-implementation-plan.yaml
-
-Inputs:
-requirement_path=requirements/cart_validation.md
-scope=Cart validation rule
-scope_slug=feature_x
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-implementation-plan.yaml requirement_path=requirements/cart_validation.md scope=Cart validation rule scope_slug=feature_x
 ```
 
 Use only when you want the entire planning chain.
@@ -295,15 +259,7 @@ For a narrow task, choose a smaller workflow.
 ## 11. UC-09 — Claim Justification
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/claim-justification.yaml
-
-Inputs:
-claim=All write APIs can reach the CLI integration path.
-scope=Checkout API integration exposure
-scope_slug=write_api_cli_exposure
+/run-engineering-workflow .ai-engineering/workflows/claim-justification.yaml claim=All write APIs can reach the CLI integration path. scope=Checkout API integration exposure scope_slug=write_api_cli_exposure
 ```
 
 The exact claim may be:
@@ -320,15 +276,7 @@ Do not convert a narrower proven statement into the original broader claim.
 ## 12. UC-10 — Architecture Drift / Rebaseline
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/architecture-drift-rebaseline.yaml
-
-Inputs:
-scope=Current system baseline
-scope_slug=current_system
-change_range=<optional>
+/run-engineering-workflow .ai-engineering/workflows/architecture-drift-rebaseline.yaml scope=Current system baseline scope_slug=current_system change_range=<optional>
 ```
 
 Stages:
@@ -343,15 +291,7 @@ detect drift
 ## 13. UC-11 — Incident RCA
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/incident-root-cause-analysis.yaml
-
-Inputs:
-incident_input=evidence/python_worker_memory_incident.md
-scope=Python worker memory growth
-scope_slug=production_oom
+/run-engineering-workflow .ai-engineering/workflows/incident-root-cause-analysis.yaml incident_input=evidence/python_worker_memory_incident.md scope=Python worker memory growth scope_slug=production_oom
 ```
 
 A partial/evidence-limited conclusion is acceptable.
@@ -363,16 +303,7 @@ Never force a root cause when evidence only supports candidate causes.
 ## 14. UC-12 — Observability / Audit Trace
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/observability-traceability-analysis.yaml
-
-Inputs:
-analysis_question=Where is the authenticated user identity available and where is order-change audit logging emitted?
-scope=Order-change audit logging
-scope_slug=order_change_audit_logging
-requirement_path=requirements/order_audit.md
+/run-engineering-workflow .ai-engineering/workflows/observability-traceability-analysis.yaml analysis_question=Where is the authenticated user identity available and where is order-change audit logging emitted? scope=Order-change audit logging scope_slug=order_change_audit_logging requirement_path=requirements/order_audit.md
 ```
 
 Trace:
@@ -395,16 +326,13 @@ Use the persisted workflow state under:
 docs/reverse-engineering/.ai-engineering/workflows/<run-id>.yaml
 ```
 
-Then:
+Resume by invoking the same workflow with the same `run_id` and required inputs. Example for UC-01:
 
 ```text
-Use /run-engineering-workflow.
-
-Resume workflow run:
-<run-id>
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=<same-run-id>
 ```
 
-The agent must use persisted state and artifacts.
+The agent must use persisted state and artifacts; it must not reconstruct completion from chat memory.
 It must not reconstruct completion from chat memory.
 
 ---
@@ -457,37 +385,46 @@ For high-impact downstream decisions:
 
 ## 18. Minimal Command Cheat Sheet
 
+For long multi-stage work, start Copilot CLI with:
+
+```bash
+copilot --mode autopilot --max-autopilot-continues 20
+```
+
+Select `system-reverse-engineer` with `/agent`, then use one-line skill invocations:
+
 ```text
 # full baseline
-Run .ai-engineering/workflows/full-reverse-engineering.yaml
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=YYYYMMDD
 
 # one technical question
-Run .ai-engineering/workflows/targeted-source-analysis.yaml
+/run-engineering-workflow .ai-engineering/workflows/targeted-source-analysis.yaml scope=<scope> scope_slug=<slug> analysis_question=<question>
 
 # patch
-Run .ai-engineering/workflows/patch-impact-to-tests.yaml
+/run-engineering-workflow .ai-engineering/workflows/patch-impact-to-tests.yaml patch_path=<path> scope=<scope> scope_slug=<slug>
 
 # requirement → TDD
-Run .ai-engineering/workflows/requirement-to-design.yaml
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-design.yaml requirement_path=<path> scope=<scope> scope_slug=<slug>
 
 # TDD → DD/WBS
-Run .ai-engineering/workflows/design-to-implementation.yaml
+/run-engineering-workflow .ai-engineering/workflows/design-to-implementation.yaml requirement_path=<path> current_state_artifact=<path> gap_artifact=<path> tdd_path=<path> scope=<scope> scope_slug=<slug>
 
 # end-to-end planning
-Run .ai-engineering/workflows/requirement-to-implementation-plan.yaml
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-implementation-plan.yaml requirement_path=<path> scope=<scope> scope_slug=<slug>
 
 # claim
-Run .ai-engineering/workflows/claim-justification.yaml
+/run-engineering-workflow .ai-engineering/workflows/claim-justification.yaml claim=<statement> scope=<scope> scope_slug=<slug>
 
 # drift
-Run .ai-engineering/workflows/architecture-drift-rebaseline.yaml
+/run-engineering-workflow .ai-engineering/workflows/architecture-drift-rebaseline.yaml scope=<scope> scope_slug=<slug>
 
 # incident
-Run .ai-engineering/workflows/incident-root-cause-analysis.yaml
+/run-engineering-workflow .ai-engineering/workflows/incident-root-cause-analysis.yaml incident_input=<path> scope=<scope> scope_slug=<slug>
 
 # audit/log/trace
-Run .ai-engineering/workflows/observability-traceability-analysis.yaml
+/run-engineering-workflow .ai-engineering/workflows/observability-traceability-analysis.yaml analysis_question=<question> scope=<scope> scope_slug=<slug>
 ```
+
 
 See `docs/USE_CASE_CATALOG.md` for decision guidance and `docs/SKILL_MATRIX.md` when you need to understand the skills behind a workflow.
 
@@ -511,17 +448,7 @@ No manual WBS-ID prompt is required.
 For an existing completed run that must be independently audited:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/post-readiness-audit.yaml
-
-Inputs:
-source_run_id=<completed run id>
-source_workflow_state=docs/reverse-engineering/workflows/<run-id>.yaml
-requirement_path=<path>
-scope=<scope>
-scope_slug=<safe-name>
+/run-engineering-workflow .ai-engineering/workflows/post-readiness-audit.yaml source_run_id=<completed run id> source_workflow_state=docs/reverse-engineering/workflows/<run-id>.yaml requirement_path=<path> scope=<scope> scope_slug=<safe-name>
 ```
 
 Expected output:

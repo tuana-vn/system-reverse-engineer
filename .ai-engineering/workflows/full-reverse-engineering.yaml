@@ -1,6 +1,7 @@
 version: '4.0'
 name: full-reverse-engineering
-description: Full repository reverse engineering executed as an explicit workflow over existing skills. Runtime
+description: Full repository reverse engineering executed as an explicit workflow over existing skills. In Autopilot, intermediate
+  stage completion is a checkpoint and execution must continue through workflow transitions until a terminal state. Runtime
   execution must not create or modify agent-infrastructure files under .ai-engineering or .github.
 runner_skill: run-engineering-workflow
 state_path: '{{artifact_root}}/workflow_state.yaml'
@@ -14,92 +15,107 @@ inputs:
     scope: repository-wide current-system baseline
 steps:
   discovery_and_runtime:
-    inline_instruction: 'Reconstruct the current repository topology, inbound/startup surface, and representative
-      runtime flows using current source and runtime/config evidence as primary truth. Apply the named existing
-      skills directly; do not invoke slash sub-skills, create helper prompts, create helper workflows, or modify
-      .ai-engineering/.github. Update canonical evidence artifacts and write the declared stage report with exactly
-      one WORKFLOW_GATE. Use DISCOVERY_COMPLETE only when representative current flows and material entry surfaces
-      are source-backed; otherwise use DISCOVERY_PARTIAL.
-
-      '
+    inline_instruction: Reconstruct repository topology, inbound/startup surfaces, major subsystem candidates, and representative
+      runtime flows from current source. Execute directly in the selected custom agent; do not delegate. Prioritize relationships/responsibilities
+      over file counts. Create/update models/component_catalog.md plus evidence-linked Mermaid diagrams diagrams/01_system_context.md
+      and diagrams/02_component_architecture.md. Create/update diagrams/03_primary_runtime_sequence.md when a representative
+      externally significant flow can be traced at this stage; later stages must complete it. Every material diagram node/edge
+      must be supportable from source and each diagram file must contain an Evidence Anchors section. Update canonical evidence
+      artifacts and write the declared stage report with exactly one WORKFLOW_GATE. Use DISCOVERY_COMPLETE only when material
+      entry surfaces, subsystem responsibilities, and representative current flows are source-backed; otherwise DISCOVERY_PARTIAL.
     skills:
     - reverse-engineering-bootstrap
     - runtime-flow-analysis
+    - architecture-reconstruction-and-diagrams
     output: '{{artifact_root}}/01_discovery_and_runtime.md'
     statuses:
       DISCOVERY_COMPLETE: integration_configuration_boundaries
       DISCOVERY_PARTIAL: resolve_discovery_unknowns
   integration_configuration_boundaries:
-    inline_instruction: 'Trace integration selection, concrete runtime binding, behavior-changing configuration
-      provenance, and external boundaries/exposure. Apply only the named existing skills directly. Do not materialize
-      skills into new prompts/workflows and do not modify .ai-engineering/.github. Update canonical evidence artifacts
-      and write the declared stage report with exactly one WORKFLOW_GATE. Use INTEGRATION_SURFACE_COMPLETE only
-      when high-impact routing/binding/configuration/boundary claims are source-backed or explicitly externally
-      blocked.
-
-      '
+    inline_instruction: Trace integration selection, concrete runtime binding, behavior-changing configuration provenance,
+      and external boundaries/exposure. Update models/integration_catalog.md, models/configuration_model.md, and evidence-linked
+      diagrams/04_integration_boundaries.md. Refine component/runtime diagrams when new verified relationships are discovered.
+      Do not accept client/factory inventories as architecture. Apply only named skills directly; do not modify methodology
+      infrastructure. Write the declared stage report with exactly one WORKFLOW_GATE. Use INTEGRATION_SURFACE_COMPLETE only
+      when material routing/binding/configuration/boundary claims and their relationships are source-backed or explicitly
+      externally blocked.
     skills:
     - integration-selection-analysis
     - runtime-binding-verification
     - configuration-source-trace
     - runtime-flow-analysis
+    - architecture-reconstruction-and-diagrams
     output: '{{artifact_root}}/03_integration_configuration_boundaries.md'
     statuses:
       INTEGRATION_SURFACE_COMPLETE: persistence_failure_lifecycle
       INTEGRATION_SURFACE_PARTIAL: resolve_integration_unknowns
   persistence_failure_lifecycle:
-    inline_instruction: 'Determine whether persistence/data-model concerns are applicable and reconstruct material
-      persistence, error, retry, fallback, lifecycle, concurrency, and async behavior. Apply only the named existing
-      skills directly. Do not create helper methodology files or modify .ai-engineering/.github. Record NOT_APPLICABLE
-      with evidence where appropriate. Write the declared stage report with exactly one WORKFLOW_GATE.
-
-      '
+    inline_instruction: Determine persistence/data-model applicability and reconstruct material persistence, error, retry,
+      fallback, lifecycle, concurrency, async, and state behavior. Update models/persistence_state_model.md and models/runtime_flow_catalog.md.
+      Complete/refine diagrams/03_primary_runtime_sequence.md and create diagrams/05_state_persistence_lifecycle.md with Mermaid
+      and Evidence Anchors. If persistence is not applicable, model the most material state/resource/job lifecycle instead.
+      Record NOT_APPLICABLE with evidence where appropriate. Write the declared stage report with exactly one WORKFLOW_GATE.
     skills:
     - persistence-schema-reverse-engineering
     - runtime-flow-analysis
+    - architecture-reconstruction-and-diagrams
     output: '{{artifact_root}}/06_persistence_failure_lifecycle.md'
     statuses:
       SYSTEM_BEHAVIOR_COMPLETE: evidence_hardening
       SYSTEM_BEHAVIOR_PARTIAL: resolve_behavior_unknowns
   evidence_hardening:
-    inline_instruction: 'Verify high-impact candidate claims against current source, search counterexamples and
-      alternate paths, close source-resolvable HIGH/CRITICAL unknowns, and promote only defensible claims. Apply
-      only the named existing skills directly. Do not create helper prompts/workflows and do not modify .ai-engineering/.github.
-      Write the declared stage report with exactly one WORKFLOW_GATE. If source-resolvable HIGH/CRITICAL gaps remain,
-      use EVIDENCE_NOT_READY rather than self-authorizing readiness.
-
-      '
+    inline_instruction: Verify high-impact candidate claims against current source, search counterexamples and alternate paths,
+      close source-resolvable HIGH/CRITICAL unknowns, and promote only defensible claims. For material source-backed claims
+      require repo-relative source path and symbol/config key where applicable; class name alone is insufficient when a path
+      is discoverable. Re-verify evidence anchors used by model artifacts and diagrams. Apply only named skills directly and
+      do not modify methodology infrastructure. Write the declared stage report with exactly one WORKFLOW_GATE. If source-resolvable
+      HIGH/CRITICAL gaps remain, use EVIDENCE_NOT_READY.
     skills:
     - claim-verification-and-promotion
     - resolve-high-impact-unknowns
     output: '{{artifact_root}}/08_evidence_hardening.md'
     statuses:
-      EVIDENCE_HARDENED: adversarial_readiness
+      EVIDENCE_HARDENED: baseline_synthesis
       EVIDENCE_NOT_READY: resolve_evidence_unknowns
-      EVIDENCE_EXTERNAL_BLOCKERS_ONLY: adversarial_readiness
+      EVIDENCE_EXTERNAL_BLOCKERS_ONLY: baseline_synthesis
+  baseline_synthesis:
+    inline_instruction: Synthesize the verified current-system evidence into the canonical consumer-facing docs/reverse-engineering/CURRENT_STATE_TDD.md.
+      Use current-state-tdd-synthesis and architecture-reconstruction-and-diagrams. The TDD must explain responsibilities,
+      dependencies, runtime flows, integration boundaries, state ownership, lifecycle, configuration/runtime selection, error
+      behavior, and variants; it must not be an audit dump. Ensure the 5 mandatory Mermaid diagram artifacts and 5 canonical
+      model artifacts exist, are evidence-linked, and are referenced by the TDD. Run python .ai-engineering/tools/validate-reverse-engineering-quality.py
+      --artifact-root docs/reverse-engineering. Write the declared stage report with exactly one WORKFLOW_GATE. Use BASELINE_SYNTHESIS_COMPLETE
+      only when the quality validator passes; otherwise BASELINE_SYNTHESIS_INCOMPLETE.
+    skills:
+    - current-state-tdd-synthesis
+    - architecture-reconstruction-and-diagrams
+    - baseline-source-of-truth-maintenance
+    output: '{{artifact_root}}/10_baseline_synthesis.md'
+    statuses:
+      BASELINE_SYNTHESIS_COMPLETE: adversarial_readiness
+      BASELINE_SYNTHESIS_INCOMPLETE: BLOCKED
   adversarial_readiness:
-    inline_instruction: 'Adversarially challenge the promoted baseline and audit investigation coverage. Re-check
-      high-impact routing, binding, configuration, data provenance, boundary/exposure, persistence, fallback, lifecycle,
-      and scope-isolation claims against current source. Apply only the named existing skills directly. Do not create
-      helper prompts/workflows and do not modify .ai-engineering/.github. Consolidate the final source-backed baseline
-      into the declared output and end it with exactly one WORKFLOW_GATE. Never return BASELINE_READY while source-resolvable
-      HIGH/CRITICAL gaps or unresolved adversarial contradictions remain.
-
-      '
+    inline_instruction: Adversarially challenge promoted claims and audit both evidence coverage and consumer usability. Re-check
+      high-impact routing, binding, configuration, data provenance, boundary/exposure, persistence, fallback, lifecycle, scope-isolation,
+      and source anchors. Audit CURRENT_STATE_TDD.md and the mandatory diagram/model artifacts; the audit itself is not the
+      baseline. Run python .ai-engineering/tools/validate-reverse-engineering-quality.py --artifact-root docs/reverse-engineering
+      and prohibit BASELINE_READY on validator failure. Write the readiness review to the declared output with exactly one
+      WORKFLOW_GATE. Never return BASELINE_READY while source-resolvable HIGH/CRITICAL gaps, contradictions, or mandatory
+      consumer-model gaps remain.
     skills:
     - adversarial-baseline-audit
     - reverse-engineering-coverage-audit
     - baseline-source-of-truth-maintenance
-    output: '{{artifact_root}}/12_final_reverse_engineered_baseline.md'
+    output: '{{artifact_root}}/reviews/12_readiness_audit.md'
     statuses:
       BASELINE_READY: DONE
       BASELINE_READY_WITH_EXTERNAL_BLOCKERS: DONE
       NOT_READY_HIGH_IMPACT_GAPS: resolve_adversarial_unknowns
       PARTIAL_RESUMABLE: BLOCKED
   resolve_discovery_unknowns:
-    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
-      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
-      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding stage.
+      Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify methodology
+      infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
     skills:
     - resolve-high-impact-unknowns
     - claim-verification-and-promotion
@@ -110,9 +126,9 @@ steps:
       HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: discovery_and_runtime
       HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
   resolve_integration_unknowns:
-    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
-      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
-      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding stage.
+      Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify methodology
+      infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
     skills:
     - resolve-high-impact-unknowns
     - claim-verification-and-promotion
@@ -123,9 +139,9 @@ steps:
       HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: integration_configuration_boundaries
       HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
   resolve_behavior_unknowns:
-    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
-      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
-      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding stage.
+      Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify methodology
+      infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
     skills:
     - resolve-high-impact-unknowns
     - claim-verification-and-promotion
@@ -136,9 +152,9 @@ steps:
       HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: persistence_failure_lifecycle
       HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
   resolve_evidence_unknowns:
-    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
-      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
-      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding stage.
+      Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify methodology
+      infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
     skills:
     - resolve-high-impact-unknowns
     - claim-verification-and-promotion
@@ -149,9 +165,9 @@ steps:
       HIGH_IMPACT_UNKNOWNS_EXTERNAL_ONLY: evidence_hardening
       HIGH_IMPACT_UNKNOWNS_OPEN: BLOCKED
   resolve_adversarial_unknowns:
-    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding
-      stage. Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify
-      methodology infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
+    inline_instruction: Resolve only the HIGH/CRITICAL source-resolvable unknowns that blocked the immediately preceding stage.
+      Use current repository evidence, persist exact unresolved Q-IDs and closure evidence, and do not modify methodology
+      infrastructure. End the declared artifact with exactly one WORKFLOW_GATE.
     skills:
     - resolve-high-impact-unknowns
     - claim-verification-and-promotion
@@ -164,3 +180,4 @@ steps:
 execution:
   execution_mode: resume
   ignore_previous_completion: false
+  delegation_mode: direct_only

@@ -106,6 +106,30 @@ Attack claims that appear to have been promoted before:
 - exposure closure where applicable
 - current-source reverification
 
+## Consumer Usability Attack
+
+Attack the generated current-state model, not only the factual claims.
+
+Verify:
+
+1. `CURRENT_STATE_TDD.md` is a technical system model rather than an audit dump.
+2. all 5 mandatory diagram artifacts exist and contain Mermaid.
+3. diagrams show real verified relationships rather than generic boxes.
+4. major subsystem responsibilities and dependencies are explicit.
+5. primary runtime behavior is understandable without reading the whole repository.
+6. external boundaries and runtime selection are visible.
+7. state/persistence/lifecycle ownership is visible.
+8. material diagram nodes/edges have evidence anchors.
+9. large inventories/schema dumps are supporting artifacts rather than the main architecture narrative.
+
+Run:
+
+```bash
+python .ai-engineering/tools/validate-reverse-engineering-quality.py --artifact-root docs/reverse-engineering
+```
+
+A validator failure prohibits `BASELINE_READY`.
+
 ## Audit Matrix
 
 | Evidence ID | Promoted Claim | Scope Attack | Provenance Attack | Exposure Attack | Counterevidence | Verdict | Action |
@@ -144,6 +168,9 @@ Before declaring a high-impact promoted claim `HOLDS`:
 [ ] boundary/exposure closure is complete when reachability is claimed
 [ ] no sibling operation contradicts the generalized rule
 [ ] tests were not substituted for production wiring
+[ ] consumer-quality validator passes
+[ ] mandatory diagram set is complete
+[ ] CURRENT_STATE_TDD is the canonical consumer baseline
 ```
 
 If an applicable item is unresolved, do not use `HOLDS`.

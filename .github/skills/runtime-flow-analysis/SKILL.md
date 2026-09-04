@@ -86,6 +86,21 @@ Do not write directly to canonical baseline.
    - REJECT
    - LEAVE UNKNOWN
 
+## Runtime Model and Diagram Requirement
+
+For each materially distinct externally significant flow family, update `docs/reverse-engineering/models/runtime_flow_catalog.md` with:
+
+| Flow | Entry | Validation | Orchestration | State/Integration | Result/Error Mapping | Observable Effect | Evidence |
+|---|---|---|---|---|---|---|---|
+
+For the primary representative full-system flow, create/update:
+
+```text
+docs/reverse-engineering/diagrams/03_primary_runtime_sequence.md
+```
+
+It must contain a Mermaid `sequenceDiagram` and an `Evidence Anchors` section. A class list or prose-only flow is insufficient.
+
 ## Output
 
 Detailed flow:
@@ -109,4 +124,6 @@ A runtime-flow document is incomplete when an applicable item is unresolved with
 [ ] observable result/error mapping is proven
 [ ] alternate paths/counterexamples were searched
 [ ] unresolved links remain hypotheses/unknowns rather than promoted facts
+[ ] material flow is represented in the runtime flow catalog
+[ ] primary full-system flow has an evidence-linked Mermaid sequence diagram
 ```

@@ -41,6 +41,35 @@ aggressive discovery
 - **Coverage is audited.** The workflow looks for architecture domains that were never investigated, not only contradictions in what was already documented.
 - **The repository is persistent memory.** Copilot conversations are disposable working context.
 
+## Recommended GitHub Copilot CLI execution
+
+For full multi-stage reverse engineering, start the CLI in **Autopilot** mode:
+
+```bash
+copilot --mode autopilot --max-autopilot-continues 20
+```
+
+Then use `/agent` and select:
+
+```text
+system-reverse-engineer
+```
+
+Invoke:
+
+```text
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=YYYYMMDD
+```
+
+The requested task is the **whole workflow**, not one stage. The canonical full-baseline deliverable is `docs/reverse-engineering/CURRENT_STATE_TDD.md` plus five evidence-linked Mermaid architecture/runtime diagrams. Each stage is executed and
+checkpointed separately, then Autopilot continues to the workflow-derived next stage until a
+terminal state is reached.
+
+`--max-autopilot-continues` is a CLI safety ceiling. If the ceiling is reached before the
+workflow reaches a terminal state, resume the same `run_id`. Omitting the option uses the
+CLI's default continuation limit.
+
+
 ## controlled engineering-agent model
 
 4.0 provides first-class **prompts + declarative workflows** above reusable skills:
@@ -215,9 +244,13 @@ For project-specific behavior, repository-level installation is preferred becaus
 For requirement-to-design work:
 
 ```text
-Use /run-engineering-workflow.
+Use the one-line workflow skill invocation. Example:
 
-Run .ai-engineering/workflows/requirement-to-design.yaml with:
+```text
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-design.yaml requirement_path=<path> scope=<scope> scope_slug=<slug>
+```
+
+Required inputs are:
 requirement_path=<path>
 scope=<scope>
 scope_slug=<safe-name>

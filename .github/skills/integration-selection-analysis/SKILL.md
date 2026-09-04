@@ -59,6 +59,24 @@ Before adding a row to `00_master_decision_matrix.md`:
 
 If any condition is unresolved, keep it in `00_hypotheses.md`, not canonical matrix.
 
+## Architecture Model Requirement
+
+Update:
+
+```text
+docs/reverse-engineering/models/integration_catalog.md
+docs/reverse-engineering/diagrams/04_integration_boundaries.md
+```
+
+The catalog must classify every known material external integration with:
+
+| Integration | Caller/Owner | Abstraction | Selector/Binding | Concrete Implementation | Protocol/Boundary | Config | Failure/Fallback | Evidence |
+|---|---|---|---|---|---|---|---|---|
+
+`04_integration_boundaries.md` must contain a Mermaid diagram showing application components, selection/binding points, concrete integrations, and external systems/processes. Include `Evidence Anchors`.
+
+A list of client/factory class names is not sufficient integration architecture.
+
 ## Output
 
 `docs/reverse-engineering/integration-selection.md`

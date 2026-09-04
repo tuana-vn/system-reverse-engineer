@@ -21,6 +21,10 @@ Under `docs/reverse-engineering/`:
 00_open_questions.md
 workflow_state.yaml
 00_investigation_coverage.md
+CURRENT_STATE_TDD.md  # may remain a clearly marked scaffold until synthesis
+diagrams/
+models/
+reviews/
 ```
 
 ## Baseline Identity

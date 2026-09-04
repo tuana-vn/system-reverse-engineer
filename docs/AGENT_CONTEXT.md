@@ -957,3 +957,24 @@ Before changing the agent package, re-read the current `docs/PACKAGE_MAINTENANCE
 - CURRENT analysis must not classify requirement gaps.
 - Source-resolvable facts needed by authoritative TDD design questions are design prerequisites and must be resolved before Stage 03.
 - Requirement-silent fields must not be promoted to mandatory audit fields.
+
+
+## Full Reverse-Engineering Quality Contract
+
+The canonical full-baseline consumer artifact is `docs/reverse-engineering/CURRENT_STATE_TDD.md`, not the readiness audit.
+
+UC-01 requires five evidence-linked Mermaid diagram artifacts (system context, component architecture, primary runtime sequence, integration boundaries, state/persistence/lifecycle) plus canonical component/runtime-flow/integration/configuration/persistence-state models.
+
+`BASELINE_READY` requires `.ai-engineering/tools/validate-reverse-engineering-quality.py` to pass.
+
+Recommended Copilot CLI invocation:
+
+```bash
+copilot --mode autopilot --max-autopilot-continues 20
+```
+
+Select `system-reverse-engineer` with `/agent`, then:
+
+```text
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=YYYYMMDD
+```

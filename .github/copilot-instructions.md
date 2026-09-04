@@ -28,8 +28,30 @@ If a workflow exists, do not collapse multiple stages into one answer.
 Use `/run-engineering-workflow` and require the stage artifact's `WORKFLOW_GATE`.
 A missing gate is not a pass.
 
+For a multi-stage workflow running in Autopilot, an intermediate stage gate is a checkpoint,
+not completion of the user's task. After persisting a valid non-terminal transition, continue
+the next stage automatically. Do not emit `Task complete` while `workflow_state.yaml` still
+has a non-terminal `active_step`. Finish only at a workflow terminal state, explicit
+`stop_after_step`, or a genuine blocking/input-required condition.
+
 Do not assume a generic skill knows the feature-specific requirement scope.
 Read the referenced task prompt.
+
+## Workflow Execution / Delegation
+
+Workflow stages are **direct execution by default**.
+
+If `execution.delegation_mode` is absent or equals `direct_only`:
+
+- do not spawn a General-purpose agent or background sub-agent for the stage;
+- execute source discovery, repository searches, shell inspection, artifact generation,
+  and gate validation directly in the selected custom agent;
+- do not wait/poll an idle worker;
+- transition only after the declared artifact exists and its `WORKFLOW_GATE` is valid.
+
+Only an explicit `delegation_mode: bounded` permits delegation. A bounded delegated attempt
+that becomes idle or produces no declared artifact must be abandoned after the first
+no-progress observation and the stage must continue by direct execution.
 
 
 ## Reverse-Engineering Workspace
@@ -167,6 +189,26 @@ Avoid repeatedly loading every generated artifact or the whole repository.
 
 Tests are supporting evidence. Tests alone do not prove active production wiring.
 
+## Reverse-Engineering Consumer Quality
+
+For a full baseline, do not confuse evidence bookkeeping with system understanding. Produce a consumer-facing current-system model.
+
+Mandatory full-baseline outputs include `CURRENT_STATE_TDD.md`, five evidence-linked Mermaid diagram artifacts, and canonical component/runtime/integration/configuration/persistence-state models.
+
+Use these priorities:
+
+```text
+model > inventory
+relationships > file counts
+behavior > component names
+diagrams > repeated prose
+consumer usability > audit verbosity
+```
+
+A class/file inventory, schema dump, or audit matrix alone is not architecture. `BASELINE_READY` requires the reverse-engineering quality validator to pass.
+
+Material source claims require repo-relative evidence paths; add symbols/config keys where applicable.
+
 ## Output Discipline
 
 Write detailed findings to repository artifacts.
@@ -261,3 +303,19 @@ Before changing/releasing the agent package, re-read `docs/PACKAGE_MAINTENANCE_R
 ## Runtime methodology immutability (4.0)
 
 During normal repository analysis/reverse-engineering execution, treat `.ai-engineering/` and `.github/` as read-only methodology infrastructure. Do not create temporary/helper prompts, workflows, skills, or agents there. Write runtime outputs only to workflow-declared artifact/state paths. If a required methodology asset is missing, stop and report it instead of synthesizing one. This restriction does not apply when the user explicitly asks to maintain or modify the methodology package itself.
+
+
+### Mermaid correctness
+
+Generated Mermaid is executable documentation, not decorative prose. Never mix Mermaid grammars:
+`graph`/`flowchart` diagrams use `-->` / `-->|label|`; `sequenceDiagram` uses `->>` / `-->>` with
+`: message`. A mandatory diagram that is syntactically invalid does not satisfy a quality gate.
+
+
+### Preserve diagram semantics
+
+Do not change a required diagram's semantic type to work around Mermaid syntax errors.
+Component Architecture and boundary/context artifacts remain graph/flowchart representations;
+Primary Runtime Sequence remains `sequenceDiagram`; lifecycle artifacts remain lifecycle/state
+representations when evidence supports them. Repair grammar inside the required representation.
+A syntactically valid diagram of the wrong semantic type does not satisfy the quality gate.

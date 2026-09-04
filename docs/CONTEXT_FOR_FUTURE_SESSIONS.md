@@ -83,3 +83,24 @@ The package stops at evidence-backed planning/readiness. `IMPLEMENTATION_READY` 
 ## Package maintenance
 
 Before changing methodology assets, read `docs/METHODOLOGY_BASELINE.md` and `docs/PACKAGE_MAINTENANCE_RULES.md`. Runtime engineering workflows treat `.ai-engineering/` and `.github/` as read-only methodology infrastructure.
+
+
+## Full Reverse-Engineering Quality Contract
+
+The canonical full-baseline consumer artifact is `docs/reverse-engineering/CURRENT_STATE_TDD.md`, not the readiness audit.
+
+UC-01 requires five evidence-linked Mermaid diagram artifacts (system context, component architecture, primary runtime sequence, integration boundaries, state/persistence/lifecycle) plus canonical component/runtime-flow/integration/configuration/persistence-state models.
+
+`BASELINE_READY` requires `.ai-engineering/tools/validate-reverse-engineering-quality.py` to pass.
+
+Recommended Copilot CLI invocation:
+
+```bash
+copilot --mode autopilot --max-autopilot-continues 20
+```
+
+Select `system-reverse-engineer` with `/agent`, then:
+
+```text
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=YYYYMMDD
+```

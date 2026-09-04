@@ -4,7 +4,7 @@ This is the navigation/source-of-truth matrix for operating the package.
 
 | Use Case | Workflow | Prompt(s) | Main Skills | Output/Gate |
 |---|---|---|---|---|
-| UC-01 Full baseline | `full-reverse-engineering.yaml` | inline workflow instruction + skill-internal stages | `full-reverse-engineering` plus its source/evidence skills | canonical baseline / `BASELINE_READY*` |
+| UC-01 Full baseline | `full-reverse-engineering.yaml` | inline workflow instruction + skill-internal stages | `full-reverse-engineering`, `architecture-reconstruction-and-diagrams`, `current-state-tdd-synthesis` plus source/evidence skills | `CURRENT_STATE_TDD.md` + diagrams/models / `BASELINE_READY*` |
 | UC-03 Targeted analysis | `targeted-source-analysis.yaml` | `.ai-engineering/prompts/targeted-source-analysis/01-targeted-analysis.md` | runtime flow + claim verification; add config/binding/integration/persistence as needed | targeted analysis |
 | UC-04 Patch impact | `patch-impact-to-tests.yaml` | 3 patch prompts | patch impact, compliance optional, regression/contract tests | impact/compliance/test design |
 | UC-05/06 Requirement analysis/design | `requirement-to-design.yaml` | 4 requirement prompts | runtime flow, compliance, claim verify, TDD, tests | current state → gap → TDD → tests |

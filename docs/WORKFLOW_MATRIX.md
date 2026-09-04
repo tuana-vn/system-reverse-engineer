@@ -2,7 +2,7 @@
 
 | Workflow | Use Case | Use When | Required Inputs | Major Outputs | Success Gate |
 |---|---|---|---|---|---|
-| `full-reverse-engineering.yaml` | UC-01 | Missing/untrusted baseline | none | canonical baseline | `BASELINE_READY*` |
+| `full-reverse-engineering.yaml` | UC-01 | Missing/untrusted baseline | none | `CURRENT_STATE_TDD.md` + diagrams/models + readiness audit | `BASELINE_READY*` |
 | `targeted-source-analysis.yaml` | UC-03/13/14/15/16 | One exact technical question | scope, scope_slug, analysis_question | targeted current-state analysis | `TARGETED_ANALYSIS_COMPLETE` |
 | `patch-impact-to-tests.yaml` | UC-04 | Patch/diff exists | patch_path, scope, scope_slug; optional requirement | impact/compliance/test artifacts | `TEST_DESIGN_COMPLETE` |
 | `requirement-to-design.yaml` | UC-05/06 | Requirement needs current-state/gap/TDD | requirement_path, scope, scope_slug | current-state, gap, TDD, test design | `workflow complete` |

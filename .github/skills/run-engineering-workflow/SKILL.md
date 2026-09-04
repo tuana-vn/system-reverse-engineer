@@ -1,6 +1,7 @@
 ---
 name: run-engineering-workflow
-description: Execute a declarative System Reverse Engineer workflow as a guarded state machine. Load the workflow definition, run one prompt stage at a time with the named skills, require structured artifact gates, persist workflow state, route unresolved HIGH/CRITICAL source gaps to the resolver, and never skip failed or missing gates.
+description: Execute a declarative System Reverse Engineer workflow as a guarded state machine. In Autopilot, execute stages sequentially within the same user task until the workflow reaches a terminal state, while validating and persisting each stage independently.
+argument-hint: "<workflow-path> run_id=<run-id> [key=value ...] [stop_after_step=<step>]"
 license: MIT
 ---
 
@@ -88,6 +89,40 @@ Do not infer requirement paths, patch paths, scopes, or output roots when multip
 
 ## Stage Execution
 
+### Delegation Contract
+
+The runner resolves `execution.delegation_mode` with this rule:
+
+```text
+missing        -> direct_only
+direct_only    -> execute in current custom-agent session
+bounded        -> delegated attempt allowed with mandatory direct fallback
+```
+
+For `direct_only`:
+
+1. MUST NOT invoke a General-purpose agent, background agent, or asynchronous worker to own the stage;
+2. MUST use repository/tool operations directly from the current agent session;
+3. MUST NOT wait for or poll another agent;
+4. MUST write and validate the workflow-declared artifact before transition.
+
+For `bounded` delegation:
+
+1. the current stage remains owned by the parent workflow runner;
+2. the delegated task must have the same bounded stage scope and declared output;
+3. delegated completion is accepted only when the declared stage artifact exists and has a valid gate;
+4. on the first `idle`, no-progress, missing-output, or unavailable-worker observation, stop polling;
+5. immediately continue the same stage by direct execution in the parent agent;
+6. never count worker status (`running`, `idle`, `completed`) as a workflow gate.
+
+This policy prevents orchestration deadlocks such as:
+
+```text
+delegate stage -> wait -> idle -> poll -> idle -> poll ...
+```
+
+The workflow state machine advances only from validated artifacts, never from sub-agent status.
+
 For the current stage:
 
 1. persist `ACTIVE_STEP`
@@ -101,7 +136,134 @@ For the current stage:
 9. persist the gate result
 10. follow the workflow transition
 
-Do not execute multiple substantive stages in one reasoning pass.
+Do not collapse multiple substantive stages into one reasoning pass.
+
+A stage boundary is a **checkpoint**, not a task-completion boundary.
+
+After a stage artifact and gate are validated and the workflow transition resolves to another
+non-terminal step, immediately continue that next step as the next reasoning continuation in
+the **same Autopilot task**. Do not return `task_complete`, "Task complete", or an equivalent
+final answer merely because an intermediate stage completed.
+
+Only a terminal workflow state (`DONE`, `BLOCKED`, an unavoidable input-required condition,
+or an explicit `stop_after_step`) ends the user task.
+
+
+
+
+## Invocation Binding Rules
+
+Treat workflow selection and input binding deterministically from the user's invocation text.
+
+### Workflow selection
+
+If the user prompt contains exactly one explicit workflow path matching:
+
+```text
+.ai-engineering/workflows/*.yaml
+```
+
+that path is the selected workflow.
+
+In that case:
+
+- do not enumerate available workflows;
+- do not ask which workflow to run;
+- do not replace the explicit path with another candidate;
+- load that exact workflow definition.
+
+If the user supplies a workflow filename without the directory and it uniquely matches one file
+under `.ai-engineering/workflows/`, bind that unique file directly.
+
+Ask the user to select a workflow only when:
+
+- no workflow path/name is present; or
+- multiple explicit workflow candidates are supplied and intent is genuinely ambiguous.
+
+### Input binding
+
+Bind explicit `key=value` tokens from the invocation directly to workflow inputs.
+
+Example:
+
+```text
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=20260904
+```
+
+binds:
+
+```yaml
+workflow: .ai-engineering/workflows/full-reverse-engineering.yaml
+inputs:
+  run_id: "20260904"
+```
+
+Do not ask again for `run_id` or any other required input already explicitly supplied.
+
+For multiline invocations such as:
+
+```text
+/run-engineering-workflow
+
+Run:
+.ai-engineering/workflows/full-reverse-engineering.yaml
+
+Inputs:
+run_id=20260904
+```
+
+treat the `Run:` path and `Inputs:` assignments exactly the same way.
+
+Ask for clarification only for required inputs that are genuinely absent or ambiguous.
+
+### No redundant discovery
+
+Once an explicit workflow has been bound, do not list the workflow directory merely to ask the
+user which workflow to choose. Directory inspection is allowed only when needed to validate
+that the supplied workflow path exists or to resolve an unqualified unique workflow name.
+
+## Autopilot Continuation Contract
+
+For a workflow invocation in GitHub Copilot CLI Autopilot mode, distinguish:
+
+```text
+reasoning continuation
+    = one bounded stage execution/checkpoint
+
+user task
+    = the entire requested workflow run
+```
+
+Canonical behavior:
+
+```text
+execute active stage
+→ write declared artifact
+→ validate WORKFLOW_GATE
+→ persist workflow transition
+→ terminal state?
+   YES → finish the user task
+   NO  → immediately continue the next stage in the same Autopilot task
+```
+
+Intermediate stage statuses are workflow transition gates, not task-completion signals.
+
+The runner MUST NOT announce `Task complete`, emit a final workflow summary, or otherwise
+signal task completion while the persisted workflow state has a non-terminal `active_step`.
+
+A concise progress update between continuations is allowed, but execution must continue
+automatically.
+
+Terminal task completion is legal only when:
+
+1. the workflow transition resolves to `DONE`;
+2. the workflow transition resolves to `BLOCKED`;
+3. a required input is missing and continuation is impossible;
+4. an explicit `stop_after_step` has been reached; or
+5. the Copilot CLI Autopilot continuation ceiling is reached.
+
+If the CLI continuation ceiling is reached before a workflow terminal state, persist exact
+resume state and report `PARTIAL_RESUMABLE`; do not mark the workflow complete.
 
 
 ## Inclusive Stop-After-Step Control

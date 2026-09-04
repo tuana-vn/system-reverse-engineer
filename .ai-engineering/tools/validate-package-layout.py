@@ -35,6 +35,9 @@ for rel in [
     'docs/METHODOLOGY_BASELINE.md',
     'docs/package/VERSION.txt',
     'docs/package/4.0_MANIFEST.json',
+    '.ai-engineering/tools/validate-reverse-engineering-quality.py',
+    '.github/skills/architecture-reconstruction-and-diagrams/SKILL.md',
+    '.github/skills/current-state-tdd-synthesis/SKILL.md',
 ]:
     if not (ROOT/rel).is_file(): errors.append(f'missing required package file: {rel}')
 

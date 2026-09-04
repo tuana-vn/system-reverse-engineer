@@ -27,7 +27,7 @@ A skill is reusable methodology; prefer the workflow column when a controlled us
 | `resume-reverse-engineering` | Session/State | UC-01/02/03/04/06/07/08/09/10/11/12 | `many` | Rehydrate a fresh Copilot session from the existing 4.0 repository-backed reverse-engineering baseline and workflow state without restarting reverse engineering from scratch. |
 | `reverse-engineering-bootstrap` | Baseline | UC-01 | `full-reverse-engineering` | Initialize 4.0 repository-backed reverse-engineering memory, workflow state, investigation coverage, baseline identity, and broad candidate reconnaissance without prematurely promoting architecture claims. |
 | `reverse-engineering-coverage-audit` | Evidence Gate | UC-01/10 | `full-reverse-engineering / architecture-drift-rebaseline` | Audit reverse-engineering completeness by finding important architectural domains, entry points, implementations, configuration paths, boundaries, persistence areas, or lifecycle behaviors that were never investigated deeply enough. |
-| `run-engineering-workflow` | Orchestration | all workflow use cases | `all` | Execute a declarative System Reverse Engineer workflow as a guarded state machine. Load the workflow definition, run one prompt stage at a time with the named skills, require structured artifact gates, persist workflow state, route unresolved HIGH/CRITICAL source gaps to the resolver, and never skip failed or missing gates. |
+| `run-engineering-workflow` | Orchestration | all workflow use cases | `all` | Execute declarative workflows as guarded state machines. In Autopilot, bind the explicit workflow and inputs, checkpoint each stage independently, and continue the same user task until a terminal workflow state while preserving structured gates and state. |
 | `runtime-binding-verification` | Source Analysis | UC-01/03/14 | `targeted-source-analysis` | Prove how an abstraction, interface, mode, or configured choice becomes the concrete runtime implementation actually used, including DI/bootstrap/factory/provider/registry and alternate branches. |
 | `runtime-flow-analysis` | Source Analysis | UC-01/03/04/06/11/12 | `many` | Trace a runtime operation end-to-end, record candidate claims, verify important behavior, and promote only claims that pass source verification, counterexample search, and scope checks. |
 | `technical-design-proposal` | Design | UC-06/08 | `requirement-to-design` | Produce a reviewer-grade technical detailed design for a new feature or change using the evidence-backed current architecture as the design baseline. Use before implementation. |
@@ -36,3 +36,11 @@ A skill is reusable methodology; prefer the workflow column when a controlled us
 | `wbs-verification` | Implementation Planning Gate | UC-07/08 | `design-to-implementation` | Independently verify an implementation WBS for completeness, traceability, dependency correctness, source/design consistency, verification coverage, and missing work. Use before implementation readiness certification. |
 
 | `post-readiness-adversarial-audit` | Readiness Gate | UC-17 / automatic after UC-07/08 | `post-readiness-audit` / `design-to-implementation` | Independently challenge workflow integrity, WBS traceability, architecture, negative rules, boundary exposure, missing work, and source anchors after `IMPLEMENTATION_READY`. |
+
+
+## Full-Baseline Consumer-Quality Skills
+
+| Skill | Role | Required for UC-01 | Purpose |
+|---|---|---:|---|
+| `architecture-reconstruction-and-diagrams` | Architecture synthesis | yes | Convert evidence into subsystem responsibilities, relationships, and five mandatory evidence-linked Mermaid diagrams. |
+| `current-state-tdd-synthesis` | Baseline synthesis | yes | Produce canonical `CURRENT_STATE_TDD.md` for human and Design Agent consumption. |

@@ -21,7 +21,7 @@ The catalog is operational guidance, not technical evidence about the target sys
 
 | ID | Use Case | Start When | Preferred Workflow | Primary Output | Stop / Success |
 |---|---|---|---|---|---|
-| UC-01 | Build/rebuild current-system baseline | Repository is unfamiliar or baseline is missing/untrusted | `full-reverse-engineering.yaml` | canonical reverse-engineering baseline | `BASELINE_READY*` |
+| UC-01 | Build/rebuild current-system baseline | Repository is unfamiliar or baseline is missing/untrusted | `full-reverse-engineering.yaml` | `CURRENT_STATE_TDD.md` + evidence-linked diagrams/models + readiness audit | `BASELINE_READY*` |
 | UC-02 | Resume previous reverse engineering | New Copilot session; repository artifacts already exist | direct `/resume-reverse-engineering` or parent workflow | rehydrated working context | resume state recovered |
 | UC-03 | Answer one source-backed technical question | Need one flow/config/integration/data answer, not full baseline | `targeted-source-analysis.yaml` | targeted analysis artifact | `TARGETED_ANALYSIS_COMPLETE` |
 | UC-04 | Review patch/diff impact | Patch exists; need impacted runtime/external surfaces | `patch-impact-to-tests.yaml` | patch impact + tests; compliance when requirement supplied | test design complete |
@@ -47,21 +47,37 @@ Use when:
 - existing baseline may be stale/unreliable
 - later engineering work needs a trusted current-state model
 
-Run:
+Before the first full multi-stage run, start Copilot CLI with:
+
+```bash
+copilot --mode autopilot --max-autopilot-continues 20
+```
+
+Select `system-reverse-engineer` using `/agent`, then run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/full-reverse-engineering.yaml
+/run-engineering-workflow .ai-engineering/workflows/full-reverse-engineering.yaml run_id=YYYYMMDD
 ```
 
 Do not use when:
 - you only need one narrow source-backed answer
 - a good baseline already exists and a targeted workflow is enough
 
+Expected canonical consumer output:
+
+```text
+CURRENT_STATE_TDD.md
+5 evidence-linked Mermaid diagrams
+component/runtime/integration/configuration/persistence-state models
+separate readiness audit
+```
+
+`BASELINE_READY` is invalid when the reverse-engineering quality validator fails.
+
 Core skills:
 - `full-reverse-engineering`
+- `architecture-reconstruction-and-diagrams`
+- `current-state-tdd-synthesis`
 - bootstrap/resume
 - runtime/config/binding/integration/persistence analysis
 - claim verification
@@ -85,17 +101,7 @@ Where is the checkout timeout defaulted and overridden?
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/targeted-source-analysis.yaml
-
-Inputs:
-scope=<human-readable scope>
-scope_slug=<safe-name>
-analysis_question=<exact question>
-source_anchor=<optional file/class/method>
-analysis_mode=<optional runtime/config/binding/integration/persistence>
+/run-engineering-workflow .ai-engineering/workflows/targeted-source-analysis.yaml scope=<human-readable scope> scope_slug=<safe-name> analysis_question=<exact question> source_anchor=<optional file/class/method> analysis_mode=<optional runtime/config/binding/integration/persistence>
 ```
 
 The workflow must not expand into a speculative redesign.
@@ -115,16 +121,7 @@ Use when:
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/patch-impact-to-tests.yaml
-
-Inputs:
-patch_path=<diff/patch>
-scope=<scope>
-scope_slug=<safe-name>
-requirement_path=<optional>
+/run-engineering-workflow .ai-engineering/workflows/patch-impact-to-tests.yaml patch_path=<diff/patch> scope=<scope> scope_slug=<safe-name> requirement_path=<optional>
 ```
 
 Mandatory methodology:
@@ -143,15 +140,7 @@ Mandatory methodology:
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/requirement-to-design.yaml
-
-Inputs:
-requirement_path=<path>
-scope=<scope>
-scope_slug=<safe-name>
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-design.yaml requirement_path=<path> scope=<scope> scope_slug=<safe-name>
 ```
 
 Lifecycle:
@@ -173,18 +162,7 @@ Do not jump directly to design.
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/design-to-implementation.yaml
-
-Inputs:
-requirement_path=<path>
-current_state_artifact=<path>
-gap_artifact=<path>
-tdd_path=<path>
-scope=<scope>
-scope_slug=<safe-name>
+/run-engineering-workflow .ai-engineering/workflows/design-to-implementation.yaml requirement_path=<path> current_state_artifact=<path> gap_artifact=<path> tdd_path=<path> scope=<scope> scope_slug=<safe-name>
 ```
 
 Lifecycle:
@@ -206,15 +184,7 @@ TDD verification
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/requirement-to-implementation-plan.yaml
-
-Inputs:
-requirement_path=<path>
-scope=<scope>
-scope_slug=<safe-name>
+/run-engineering-workflow .ai-engineering/workflows/requirement-to-implementation-plan.yaml requirement_path=<path> scope=<scope> scope_slug=<safe-name>
 ```
 
 Use this only when the end-to-end lifecycle is desired.
@@ -236,16 +206,7 @@ Examples:
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/claim-justification.yaml
-
-Inputs:
-claim=<exact statement>
-scope=<scope>
-scope_slug=<safe-name>
-requirement_path=<optional>
+/run-engineering-workflow .ai-engineering/workflows/claim-justification.yaml claim=<exact statement> scope=<scope> scope_slug=<safe-name> requirement_path=<optional>
 ```
 
 Do not broaden/narrow the claim silently.
@@ -258,15 +219,7 @@ If exact wording cannot be proven, produce the narrowest supported replacement.
 Run after meaningful repository change when promoted current-state documentation may be stale.
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/architecture-drift-rebaseline.yaml
-
-Inputs:
-scope=<scope>
-scope_slug=<safe-name>
-change_range=<optional commit/tag/range>
+/run-engineering-workflow .ai-engineering/workflows/architecture-drift-rebaseline.yaml scope=<scope> scope_slug=<safe-name> change_range=<optional commit/tag/range>
 ```
 
 Rebaseline only after adversarial/coverage gates pass.
@@ -278,15 +231,7 @@ Rebaseline only after adversarial/coverage gates pass.
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/incident-root-cause-analysis.yaml
-
-Inputs:
-incident_input=<log/report/evidence path>
-scope=<scope>
-scope_slug=<safe-name>
+/run-engineering-workflow .ai-engineering/workflows/incident-root-cause-analysis.yaml incident_input=<log/report/evidence path> scope=<scope> scope_slug=<safe-name>
 ```
 
 An evidence-limited result is valid.
@@ -299,16 +244,7 @@ Do not invent a definitive root cause.
 Use for audit/log/metric/trace questions.
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/observability-traceability-analysis.yaml
-
-Inputs:
-analysis_question=<exact question>
-scope=<scope>
-scope_slug=<safe-name>
-requirement_path=<optional>
+/run-engineering-workflow .ai-engineering/workflows/observability-traceability-analysis.yaml analysis_question=<exact question> scope=<scope> scope_slug=<safe-name> requirement_path=<optional>
 ```
 
 Trace:
@@ -354,17 +290,7 @@ Use when:
 Run:
 
 ```text
-Use /run-engineering-workflow.
-
-Run:
-.ai-engineering/workflows/post-readiness-audit.yaml
-
-Inputs:
-source_run_id=<completed design-to-implementation run id>
-source_workflow_state=docs/reverse-engineering/workflows/<run-id>.yaml
-requirement_path=<authoritative requirement path>
-scope=<human-readable scope>
-scope_slug=<safe-name>
+/run-engineering-workflow .ai-engineering/workflows/post-readiness-audit.yaml source_run_id=<completed design-to-implementation run id> source_workflow_state=docs/reverse-engineering/workflows/<run-id>.yaml requirement_path=<authoritative requirement path> scope=<human-readable scope> scope_slug=<safe-name>
 ```
 
 For `design-to-implementation` runs, this audit is invoked automatically after

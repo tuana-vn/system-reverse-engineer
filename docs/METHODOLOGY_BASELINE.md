@@ -320,3 +320,31 @@ A source-resolvable unknown is blocking before technical design when an authorit
 Fresh-run artifacts and workflow state must be run-scoped and physically present at workflow-declared paths. A downstream stage may not be satisfied by a stale shared artifact or an undeclared summary file.
 
 When an operator requests an intermediate stop, use explicit inclusive `stop_after_step` semantics. The requested step must execute and persist its gate before the workflow stops.
+
+
+## Current-State Consumer Model Quality
+
+Full reverse engineering must convert verified evidence into a consumer-usable current-state technical model.
+
+Required full-baseline outputs:
+
+```text
+CURRENT_STATE_TDD.md
+5 evidence-linked Mermaid diagram artifacts
+component/runtime-flow/integration/configuration/persistence-state model artifacts
+separate readiness audit
+```
+
+Readiness requires both evidence correctness and model usability. A fact inventory or adversarial audit report does not substitute for a Current-State TDD.
+
+Mandatory diagram families:
+
+```text
+system context
+component architecture
+primary runtime sequence
+integration boundaries
+state/persistence/lifecycle
+```
+
+Run `python .ai-engineering/tools/validate-reverse-engineering-quality.py --artifact-root docs/reverse-engineering` before declaring the full baseline ready.

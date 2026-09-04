@@ -57,9 +57,17 @@ When the user asks to run a workflow:
 7. require the artifact's `WORKFLOW_GATE`
 8. transition only according to the workflow definition
 9. persist workflow state
-10. never skip a failed/missing gate
+10. if the next state is non-terminal, continue it automatically in the same Autopilot task
+11. treat intermediate stage completion as a checkpoint, never as task completion
+12. finish the user task only at a workflow terminal state, explicit stop-after-step, or genuine blocking/input-required condition
+13. never skip a failed/missing gate
 
 Do not turn a staged requirement workflow into one giant prompt.
+
+In Autopilot, **one stage at a time** means one stage per reasoning continuation, not one stage
+per user task. After each valid intermediate gate, persist the transition and immediately
+continue the workflow-derived next stage. Never emit `Task complete` while the persisted
+workflow state still has a non-terminal `active_step`.
 
 Skills define reusable methodology.
 Prompts define the concrete job.
@@ -67,6 +75,29 @@ Workflows define ordering, branching, retry, and stop conditions.
 
 The YAML workflow is a repository control-plane convention, not a deterministic external
 workflow engine. Reasoning remains model-driven, so evidence gates remain mandatory.
+
+## Direct Workflow Execution Policy
+
+Workflow stages execute in the **current custom-agent session by default**.
+
+For any workflow whose `execution.delegation_mode` is `direct_only` (and for any workflow
+that omits the field, because `direct_only` is the default):
+
+- MUST NOT spawn or hand the stage to a `General-purpose agent` or other background/sub-agent;
+- MUST NOT enter a `wait -> poll -> idle -> poll` loop for stage completion;
+- MUST execute repository discovery, source reads, searches, shell inspection, reasoning,
+  artifact writes, and gate validation directly in the current agent context;
+- MAY use ordinary tools directly, but tool use is not delegation;
+- MUST persist the declared stage artifact before transitioning.
+
+Delegation is legal only when the workflow explicitly declares `delegation_mode: bounded`.
+Even then, delegated completion is never sufficient by itself: the declared output artifact
+and gate must exist. One idle/no-progress observation is enough to abandon the delegated path
+and execute the stage directly; do not repeatedly poll an idle worker.
+
+The full reverse-engineering workflow is intentionally `direct_only` because repository
+bootstrap/discovery is deterministic repository inspection and must not depend on an
+unbounded general-purpose worker.
 
 
 # 1. Source-of-Truth Hierarchy
@@ -589,3 +620,40 @@ Do not ask the user to remember WBS IDs or filenames.
 
 ## Package maintenance rule
 Before changing/releasing the agent package, re-read `docs/PACKAGE_MAINTENANCE_RULES.md` and `docs/METHODOLOGY_BASELINE.md` from the exact predecessor package.
+
+
+## Consumer-Quality Contract for Full Reverse Engineering
+
+For `full-reverse-engineering.yaml`, verified claims are necessary but not sufficient.
+
+The final baseline must be understandable as a current-system technical model.
+
+Prioritize:
+
+```text
+model > inventory
+relationships > file counts
+behavior > class names
+diagrams > repeated prose
+consumer usability > audit verbosity
+```
+
+Mandatory canonical output:
+
+```text
+docs/reverse-engineering/CURRENT_STATE_TDD.md
+```
+
+Mandatory Mermaid artifacts:
+
+```text
+diagrams/01_system_context.md
+diagrams/02_component_architecture.md
+diagrams/03_primary_runtime_sequence.md
+diagrams/04_integration_boundaries.md
+diagrams/05_state_persistence_lifecycle.md
+```
+
+A full baseline cannot reach `BASELINE_READY` if any mandatory diagram/model artifact is missing, if the structural quality validator fails, or if material diagram relationships lack evidence anchors.
+
+The final readiness audit belongs under `docs/reverse-engineering/reviews/` and must not replace `CURRENT_STATE_TDD.md`.

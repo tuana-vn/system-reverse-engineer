@@ -50,6 +50,22 @@ DISCOVERY
 
 Current source and runtime/config evidence outrank generated Markdown.
 
+## Deliverable Quality Principle
+
+A reverse-engineered baseline is not complete merely because claims are verified. It must reconstruct the system into an understandable model of responsibilities, dependencies, runtime flows, state, boundaries, variants, and failure behavior.
+
+For a full backend baseline:
+
+```text
+model > inventory
+relationships > file counts
+behavior > component names
+diagrams > repeated prose
+consumer usability > audit verbosity
+```
+
+The canonical consumer artifact is `docs/reverse-engineering/CURRENT_STATE_TDD.md`. The readiness audit is separate.
+
 ## Core Analysis Obligations
 
 The full workflow must cover, where applicable:
@@ -65,7 +81,10 @@ The full workflow must cover, where applicable:
 - resource/session/cache/thread/async lifecycle when material;
 - alternate implementations, modes, branches, legacy/fallback paths, and counterexamples;
 - HIGH/CRITICAL unknown closure;
-- adversarial verification and coverage audit.
+- adversarial verification and coverage audit;
+- consumer-facing architecture synthesis;
+- mandatory Mermaid system-context, component, runtime-sequence, integration-boundary, and state/persistence/lifecycle diagrams;
+- a canonical Current-State TDD suitable as source-of-truth input to a later Design Agent.
 
 ## Evidence Discipline
 
@@ -102,6 +121,21 @@ boundary
 ```
 
 ## Readiness
+
+`BASELINE_READY` is allowed only when source-resolvable HIGH/CRITICAL gaps and material adversarial contradictions are zero **and** the consumer-quality contract passes.
+
+Consumer-quality minimum for full baseline:
+
+```text
+mandatory diagram artifacts = 5/5
+material subsystem modeling = 100%
+known integration boundary modeling = 100%
+behavior-changing configuration classification = 100%
+material evidence paths present = 100%
+blocking unknowns = 0
+```
+
+Run `.ai-engineering/tools/validate-reverse-engineering-quality.py --artifact-root docs/reverse-engineering` before final readiness.
 
 `BASELINE_READY` is allowed only when source-resolvable HIGH/CRITICAL gaps and material adversarial contradictions are zero.
 

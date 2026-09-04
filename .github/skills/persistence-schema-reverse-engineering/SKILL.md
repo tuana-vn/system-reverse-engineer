@@ -98,3 +98,29 @@ docs/reverse-engineering/persistence/<scope>.md
 ```
 
 Update evidence ledger/open questions as appropriate.
+
+
+## Consumer Architecture Model
+
+Update:
+
+```text
+docs/reverse-engineering/models/persistence_state_model.md
+docs/reverse-engineering/diagrams/05_state_persistence_lifecycle.md
+```
+
+The model must explain ownership and behavior, not merely dump entity fields.
+
+Capture, where applicable:
+
+```text
+owner
+→ read/write path
+→ transaction/connection boundary
+→ persisted entity/table/state
+→ lifecycle/state transition
+→ concurrency/async interaction
+→ failure/recovery behavior
+```
+
+`05_state_persistence_lifecycle.md` must contain at least one evidence-linked Mermaid diagram. If persistence is not applicable, model the most material runtime state/resource/job lifecycle instead and document why persistence is `NOT_APPLICABLE`.

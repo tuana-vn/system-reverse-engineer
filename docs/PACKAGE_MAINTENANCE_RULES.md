@@ -42,3 +42,16 @@ Before packaging:
 - no stale package-version label exists;
 - no historical release/change-record/archive material is included;
 - the current manifest matches the delivered files.
+
+
+## Full-Baseline Quality Contract Maintenance
+
+Changes to UC-01 must preserve the consumer-facing output contract:
+
+- canonical `CURRENT_STATE_TDD.md`;
+- five mandatory evidence-linked Mermaid diagram artifacts;
+- five canonical model artifacts;
+- separate readiness audit;
+- structural validation by `validate-reverse-engineering-quality.py` before `BASELINE_READY`.
+
+If any filename or required TDD section changes, update the workflow, skills, RUNBOOK, USE_CASE_CATALOG, matrices, and quality validator in the same change.
